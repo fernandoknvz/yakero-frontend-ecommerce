@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, TokenResponse } from '../types';
+import type { User } from '../types';
+import { STORAGE_KEYS } from '../shared/constants/storage';
 
 interface AuthState {
   token: string | null;
@@ -18,15 +19,22 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       setAuth: (token, user) => {
-        localStorage.setItem('yakero_token', token);
+        localStorage.setItem(STORAGE_KEYS.token, token);
         set({ token, user, isAuthenticated: true });
       },
       setUser: (user) => set({ user }),
       logout: () => {
-        localStorage.removeItem('yakero_token');
+        localStorage.removeItem(STORAGE_KEYS.token);
         set({ token: null, user: null, isAuthenticated: false });
       },
     }),
-    { name: 'yakero_auth', partialize: (s) => ({ token: s.token, user: s.user }) }
+    {
+      name: STORAGE_KEYS.auth,
+      partialize: (state) => ({ token: state.token, user: state.user }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.isAuthenticated = Boolean(state.token);
+      },
+    }
   )
 );

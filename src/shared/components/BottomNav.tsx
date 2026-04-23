@@ -1,12 +1,14 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
-import { useCartStore } from '../../features/cart/store/cartStore';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+import { useCartStore } from '@/features/cart/store/cartStore';
+import { APP_ROUTES } from '@/shared/constants/routes';
+import { useAuthStore } from '@/stores/authStore';
 
 const NAV_ITEMS = [
-  { path: '/',               icon: '🏠', label: 'Inicio' },
-  { path: '/account/orders', icon: '📦', label: 'Pedidos', requiresAuth: true },
-  { path: '/account',        icon: '👤', label: 'Perfil',  requiresAuth: true },
-  { path: '/login',          icon: '👤', label: 'Ingresar', guestOnly: true },
+  { path: APP_ROUTES.home, icon: '⌂', label: 'Inicio' },
+  { path: APP_ROUTES.accountOrders, icon: '□', label: 'Pedidos', requiresAuth: true },
+  { path: APP_ROUTES.account, icon: '◌', label: 'Perfil', requiresAuth: true },
+  { path: APP_ROUTES.login, icon: '◍', label: 'Ingresar', guestOnly: true },
 ];
 
 export function BottomNav() {
@@ -23,27 +25,28 @@ export function BottomNav() {
   });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 safe-area-bottom">
-      <div className="flex items-center justify-around max-w-lg mx-auto px-2 py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white safe-area-bottom">
+      <div className="mx-auto flex max-w-lg items-center justify-around px-2 py-2">
         {visibleItems.map((item) => {
           const active = pathname === item.path;
+
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-colors ${
-                active ? 'text-red-600' : 'text-gray-400'
+              className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-1 transition-colors ${
+                active ? 'text-brand' : 'text-gray-400'
               }`}
+              onClick={() => navigate(item.path)}
             >
-              <span className="text-xl relative">
+              <span className="relative text-xl">
                 {item.icon}
-                {item.path === '/' && count > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                {item.path === APP_ROUTES.home && count > 0 ? (
+                  <span className="absolute -right-2 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[10px] text-white">
                     {count > 9 ? '9+' : count}
                   </span>
-                )}
+                ) : null}
               </span>
-              <span className={`text-xs font-medium ${active ? 'text-red-600' : 'text-gray-400'}`}>
+              <span className={`text-xs font-medium ${active ? 'text-brand' : 'text-gray-400'}`}>
                 {item.label}
               </span>
             </button>

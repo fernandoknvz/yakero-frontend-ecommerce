@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
-import type { CartItem, Product, Promotion, SelectedModifier } from '../types';
+import type { CartItem, Product, Promotion, SelectedModifier } from '@/types';
+import { STORAGE_KEYS } from '../../../shared/constants/storage';
 
 interface CartState {
   items: CartItem[];
@@ -128,6 +129,6 @@ export const useCartStore = create<CartState>()(
 
       itemCount: () => get().items.reduce((acc, i) => acc + i.quantity, 0),
     }),
-    { name: 'yakero_cart' }
+    { name: STORAGE_KEYS.cart }
   )
 );

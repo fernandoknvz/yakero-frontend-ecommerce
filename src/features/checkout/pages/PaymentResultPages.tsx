@@ -1,13 +1,35 @@
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
+import { Button, LoadingState } from '@/shared/ui';
+
+function ResultLayout({
+  action,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-sm rounded-3xl border border-gray-100 bg-white p-6 text-center shadow-sm">
+        <h1 className="text-2xl font-black text-gray-900">{title}</h1>
+        <p className="mt-3 text-sm text-gray-500">{description}</p>
+        {action ? <div className="mt-6">{action}</div> : null}
+      </div>
+    </div>
+  );
+}
 
 export function PaymentSuccessPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const externalRef = params.get('external_reference'); // order id from MP
+  const externalRef = params.get('external_reference');
 
   useEffect(() => {
-    // Redirigir al tracking del pedido después de 2s
     const timer = setTimeout(() => {
       if (externalRef) {
         navigate(`/orders/${externalRef}`, { replace: true });
@@ -15,20 +37,16 @@ export function PaymentSuccessPage() {
         navigate('/account/orders', { replace: true });
       }
     }, 2500);
+
     return () => clearTimeout(timer);
   }, [externalRef, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-5 px-4">
-      <div className="text-7xl animate-bounce">🎉</div>
-      <div className="text-center">
-        <h1 className="text-2xl font-black text-gray-900">¡Pago exitoso!</h1>
-        <p className="text-gray-500 mt-2 text-sm">
-          Tu pedido fue confirmado. Redirigiendo al seguimiento...
-        </p>
-      </div>
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
-    </div>
+    <ResultLayout
+      description="Tu pedido fue confirmado. Te llevamos al seguimiento automaticamente."
+      title="Pago exitoso"
+      action={<LoadingState label="Preparando seguimiento..." />}
+    />
   );
 }
 
@@ -36,29 +54,20 @@ export function PaymentFailurePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-5 px-4">
-      <div className="text-7xl">😞</div>
-      <div className="text-center">
-        <h1 className="text-2xl font-black text-gray-900">Pago no completado</h1>
-        <p className="text-gray-500 mt-2 text-sm">
-          No pudimos procesar tu pago. Tu carrito sigue guardado.
-        </p>
-      </div>
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <button
-          onClick={() => navigate('/checkout')}
-          className="w-full bg-red-600 text-white font-bold py-3.5 rounded-2xl"
-        >
-          Reintentar pago
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="w-full border-2 border-gray-200 text-gray-700 font-semibold py-3.5 rounded-2xl text-sm"
-        >
-          Volver al menú
-        </button>
-      </div>
-    </div>
+    <ResultLayout
+      description="No pudimos procesar el pago. Tu carrito permanece guardado para reintentar."
+      title="Pago no completado"
+      action={
+        <div className="flex flex-col gap-3">
+          <Button fullWidth onClick={() => navigate('/checkout')}>
+            Reintentar pago
+          </Button>
+          <Button fullWidth onClick={() => navigate('/')} variant="secondary">
+            Volver al menu
+          </Button>
+        </div>
+      }
+    />
   );
 }
 
@@ -68,22 +77,14 @@ export function PaymentPendingPage() {
   const externalRef = params.get('external_reference');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-5 px-4">
-      <div className="text-7xl">⏳</div>
-      <div className="text-center">
-        <h1 className="text-2xl font-black text-gray-900">Pago pendiente</h1>
-        <p className="text-gray-500 mt-2 text-sm">
-          Tu pago está siendo procesado. Te avisaremos cuando esté confirmado.
-        </p>
-      </div>
-      {externalRef && (
-        <button
-          onClick={() => navigate(`/orders/${externalRef}`)}
-          className="bg-gray-900 text-white px-6 py-3 rounded-2xl font-semibold text-sm"
-        >
-          Ver estado del pedido
-        </button>
-      )}
-    </div>
+    <ResultLayout
+      description="Tu pago esta en revision. Puedes seguir el estado del pedido mientras se confirma."
+      title="Pago pendiente"
+      action={
+        externalRef ? (
+          <Button onClick={() => navigate(`/orders/${externalRef}`)}>Ver estado del pedido</Button>
+        ) : undefined
+      }
+    />
   );
 }
