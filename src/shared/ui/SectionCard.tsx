@@ -15,7 +15,9 @@ export function SectionCard({
   title,
 }: PropsWithChildren<SectionCardProps>) {
   return (
-    <section className={`rounded-3xl border border-gray-100 bg-white p-4 shadow-sm ${className}`.trim()}>
+    <section
+      className={`rounded-3xl border border-gray-100 bg-white p-4 shadow-sm ${className}`.trim()}
+    >
       {title ? (
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>

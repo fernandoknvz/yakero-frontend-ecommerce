@@ -17,7 +17,13 @@ const STATUS_BADGE: Record<OrderStatus, { label: string; className: string }> = 
   anulado: { label: 'Anulado', className: 'bg-red-100 text-red-600' },
 };
 
-const ACTIVE_STATUSES: OrderStatus[] = ['pendiente', 'pagado', 'en_preparacion', 'listo', 'despachado'];
+const ACTIVE_STATUSES: OrderStatus[] = [
+  'pendiente',
+  'pagado',
+  'en_preparacion',
+  'listo',
+  'despachado',
+];
 
 export default function OrderHistoryPage() {
   const navigate = useNavigate();
@@ -45,7 +51,9 @@ export default function OrderHistoryPage() {
 
         {active.length ? (
           <section>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">En curso</h2>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+              En curso
+            </h2>
             <div className="space-y-3">
               {active.map((order) => (
                 <OrderCard
@@ -66,7 +74,9 @@ export default function OrderHistoryPage() {
 
         {past.length ? (
           <section>
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Historial</h2>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+              Historial
+            </h2>
             <div className="space-y-3">
               {past.map((order) => (
                 <OrderCard
@@ -128,7 +138,8 @@ function OrderCard({
           </div>
           <p className="mt-1 text-xs text-gray-400">{formatDate(createdAt)}</p>
           <p className="mt-2 text-xs text-gray-500">
-            {deliveryType === 'delivery' ? 'Delivery' : 'Retiro'} - {itemCount} item{itemCount !== 1 ? 's' : ''}
+            {deliveryType === 'delivery' ? 'Delivery' : 'Retiro'} - {itemCount} item
+            {itemCount !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">

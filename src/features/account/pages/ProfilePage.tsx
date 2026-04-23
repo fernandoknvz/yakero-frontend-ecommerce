@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import { useAddAddress, useAddresses, useDeleteAddress } from '@/shared/hooks';
-import {
-  BackButton,
-  Button,
-  EmptyState,
-  PageHeader,
-  SectionCard,
-} from '@/shared/ui';
+import { BackButton, Button, EmptyState, PageHeader, SectionCard } from '@/shared/ui';
 import { formatCLP } from '@/shared/utils/format';
 import { useAuthStore } from '@/stores/authStore';
 import type { AddressInput } from '@/types';
@@ -88,7 +82,11 @@ export default function ProfilePage() {
             <Button fullWidth onClick={() => navigate('/account/orders')} variant="secondary">
               Ver mis pedidos
             </Button>
-            <Button fullWidth onClick={() => setShowAddressForm((value) => !value)} variant="secondary">
+            <Button
+              fullWidth
+              onClick={() => setShowAddressForm((value) => !value)}
+              variant="secondary"
+            >
               {showAddressForm ? 'Ocultar formulario' : 'Agregar direccion'}
             </Button>
           </div>

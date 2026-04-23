@@ -52,15 +52,13 @@ export const useCartStore = create<CartState>()(
           (i) =>
             i.product?.id === product.id &&
             JSON.stringify(i.selected_modifiers.map((m) => m.modifier_option_id).sort()) ===
-            JSON.stringify(selectedModifiers.map((m) => m.modifier_option_id).sort())
+              JSON.stringify(selectedModifiers.map((m) => m.modifier_option_id).sort())
         );
 
         if (existing) {
           set((state) => ({
             items: state.items.map((i) =>
-              i.cartItemId === existing.cartItemId
-                ? { ...i, quantity: i.quantity + quantity }
-                : i
+              i.cartItemId === existing.cartItemId ? { ...i, quantity: i.quantity + quantity } : i
             ),
           }));
         } else {
@@ -103,9 +101,7 @@ export const useCartStore = create<CartState>()(
           return;
         }
         set((state) => ({
-          items: state.items.map((i) =>
-            i.cartItemId === cartItemId ? { ...i, quantity } : i
-          ),
+          items: state.items.map((i) => (i.cartItemId === cartItemId ? { ...i, quantity } : i)),
         }));
       },
 
@@ -114,18 +110,15 @@ export const useCartStore = create<CartState>()(
           items: state.items.filter((i) => i.cartItemId !== cartItemId),
         })),
 
-      setCoupon: (code, discount) =>
-        set({ couponCode: code, couponDiscount: discount }),
+      setCoupon: (code, discount) => set({ couponCode: code, couponDiscount: discount }),
 
       clearCoupon: () => set({ couponCode: null, couponDiscount: 0 }),
 
       setPoints: (points) => set({ pointsToUse: points }),
 
-      clearCart: () =>
-        set({ items: [], couponCode: null, couponDiscount: 0, pointsToUse: 0 }),
+      clearCart: () => set({ items: [], couponCode: null, couponDiscount: 0, pointsToUse: 0 }),
 
-      subtotal: () =>
-        get().items.reduce((acc, i) => acc + i.unit_price * i.quantity, 0),
+      subtotal: () => get().items.reduce((acc, i) => acc + i.unit_price * i.quantity, 0),
 
       itemCount: () => get().items.reduce((acc, i) => acc + i.quantity, 0),
     }),

@@ -4,6 +4,7 @@ node_modules/
 # ───────── Build ─────────
 dist/
 build/
+coverage/
 
 # ───────── Env ─────────
 .env

@@ -6,7 +6,7 @@ export default {
       colors: {
         brand: {
           DEFAULT: '#DC2626', // red-600
-          dark:    '#B91C1C', // red-700
+          dark: '#B91C1C', // red-700
         },
       },
       borderRadius: {

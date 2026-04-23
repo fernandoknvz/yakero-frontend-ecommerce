@@ -1,4 +1,6 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import { env } from '@/config/env';
@@ -6,11 +8,13 @@ import { useCartStore } from '@/features/cart/store/cartStore';
 import { getApiErrorMessage } from '@/shared/api/errors';
 import { APP_ROUTES } from '@/shared/constants/routes';
 import {
-  useAddresses,
-  useCreateOrder,
-  useDeliveryFee,
-  useValidateCoupon,
-} from '@/shared/hooks';
+  createCheckoutContactSchema,
+  FormInput,
+  FormTextarea,
+  type CheckoutFormValues,
+} from '@/shared/forms';
+import { useAddresses, useCreateOrder, useDeliveryFee, useValidateCoupon } from '@/shared/hooks';
+import { useToast } from '@/shared/toast';
 import { BackButton, Button, PageHeader, SectionCard } from '@/shared/ui';
 import { formatCLP } from '@/shared/utils/format';
 import { useAuthStore } from '@/stores/authStore';
@@ -18,6 +22,7 @@ import type { CreateOrderInput, DeliveryType } from '@/types';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const { pushToast } = useToast();
   const {
     clearCart,
     clearCoupon,
@@ -30,15 +35,26 @@ export default function CheckoutPage() {
     subtotal,
   } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
+  const schema = useMemo(() => createCheckoutContactSchema(isAuthenticated), [isAuthenticated]);
+  const {
+    control,
+    formState: { errors },
+    getValues,
+    handleSubmit,
+    register,
+    trigger,
+  } = useForm<CheckoutFormValues>({
+    defaultValues: {
+      couponInput: '',
+      guestEmail: '',
+      guestPhone: '',
+      notes: '',
+    },
+    resolver: zodResolver(schema),
+  });
   const { data: addresses = [] } = useAddresses();
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('retiro');
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [guestEmail, setGuestEmail] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
-  const [notes, setNotes] = useState('');
-  const [couponInput, setCouponInput] = useState('');
-  const [couponError, setCouponError] = useState('');
-  const [submitError, setSubmitError] = useState('');
 
   const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
   const { data: deliveryInfo } = useDeliveryFee(
@@ -47,6 +63,10 @@ export default function CheckoutPage() {
   );
   const { mutateAsync: createOrder, isPending } = useCreateOrder();
   const { mutateAsync: validateCoupon, isPending: validatingCoupon } = useValidateCoupon();
+  const watchedCouponInput = useWatch({
+    control,
+    name: 'couponInput',
+  });
 
   const subtotalAmount = subtotal();
   const deliveryFee = deliveryType === 'delivery' ? (deliveryInfo?.fee ?? 0) : 0;
@@ -57,45 +77,59 @@ export default function CheckoutPage() {
     if (deliveryType === 'delivery' && !selectedAddressId) {
       return 'Selecciona una direccion para despacho.';
     }
-    if (!isAuthenticated && !guestEmail.trim()) {
-      return 'Ingresa un email para confirmar el pedido.';
-    }
-    if (deliveryType === 'delivery' && selectedAddressId && deliveryInfo && !deliveryInfo.is_available) {
+    if (
+      deliveryType === 'delivery' &&
+      selectedAddressId &&
+      deliveryInfo &&
+      !deliveryInfo.is_available
+    ) {
       return 'La direccion seleccionada esta fuera de la zona de cobertura.';
     }
 
     return '';
-  }, [deliveryInfo, deliveryType, isAuthenticated, items.length, selectedAddressId, guestEmail]);
+  }, [deliveryInfo, deliveryType, items.length, selectedAddressId]);
 
   if (!items.length) {
     return <Navigate replace to={APP_ROUTES.home} />;
   }
 
   const handleCoupon = async () => {
-    setCouponError('');
+    const isValid = await trigger('couponInput');
+    if (!isValid) return;
 
     try {
-      const result = await validateCoupon({ code: couponInput.trim().toUpperCase(), subtotal: subtotalAmount });
+      const couponInput = getValues('couponInput').trim().toUpperCase();
+      const result = await validateCoupon({ code: couponInput, subtotal: subtotalAmount });
       setCoupon(result.code, result.calculated_discount);
-      setCouponInput(result.code);
+      pushToast({
+        tone: 'success',
+        title: 'Cupon aplicado',
+        description: `Se desconto ${formatCLP(result.calculated_discount)} del total.`,
+      });
     } catch (error) {
-      setCouponError(getApiErrorMessage(error, 'Cupon invalido o no disponible para este pedido.'));
+      pushToast({
+        tone: 'error',
+        title: 'No pudimos aplicar el cupon',
+        description: getApiErrorMessage(error, 'Cupon invalido o no disponible para este pedido.'),
+      });
     }
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = async (values: CheckoutFormValues) => {
     if (validationMessage) {
-      setSubmitError(validationMessage);
+      pushToast({
+        tone: 'error',
+        title: 'Revisa el checkout',
+        description: validationMessage,
+      });
       return;
     }
 
-    setSubmitError('');
-
     const payload: CreateOrderInput = {
       delivery_type: deliveryType,
-      address_id: deliveryType === 'delivery' ? selectedAddressId ?? undefined : undefined,
-      guest_email: !isAuthenticated ? guestEmail.trim() : undefined,
-      guest_phone: !isAuthenticated ? guestPhone.trim() || undefined : undefined,
+      address_id: deliveryType === 'delivery' ? (selectedAddressId ?? undefined) : undefined,
+      guest_email: !isAuthenticated ? values.guestEmail?.trim() : undefined,
+      guest_phone: !isAuthenticated ? values.guestPhone?.trim() || undefined : undefined,
       items: items.map((item) => ({
         product_id: item.product?.id,
         promotion_id: item.promotion?.id,
@@ -106,7 +140,7 @@ export default function CheckoutPage() {
           modifier_option_id: modifier.modifier_option_id,
         })),
       })),
-      notes: notes.trim() || undefined,
+      notes: values.notes.trim() || undefined,
       coupon_code: couponCode ?? undefined,
       points_to_use: pointsToUse,
     };
@@ -114,6 +148,11 @@ export default function CheckoutPage() {
     try {
       const order = await createOrder(payload);
       clearCart();
+      pushToast({
+        tone: 'success',
+        title: 'Pedido creado',
+        description: 'Te estamos redirigiendo al siguiente paso.',
+      });
 
       if (order.mp_preference_id) {
         window.location.assign(`${env.mercadoPagoCheckoutUrl}?pref_id=${order.mp_preference_id}`);
@@ -122,7 +161,11 @@ export default function CheckoutPage() {
 
       navigate(`/orders/${order.id}`);
     } catch (error) {
-      setSubmitError(getApiErrorMessage(error, 'No pudimos crear el pedido.'));
+      pushToast({
+        tone: 'error',
+        title: 'No pudimos crear el pedido',
+        description: getApiErrorMessage(error),
+      });
     }
   };
 
@@ -134,18 +177,22 @@ export default function CheckoutPage() {
         subtitle="Revisa despacho, descuentos y total antes de pagar."
       />
 
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5">
+      <form
+        className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-5"
+        onSubmit={handleSubmit(onSubmit)}
+      >
         <SectionCard title="Como quieres recibirlo">
           <div className="grid grid-cols-2 gap-3">
             {(['retiro', 'delivery'] as DeliveryType[]).map((type) => (
               <button
                 key={type}
-                onClick={() => setDeliveryType(type)}
                 className={`rounded-2xl border-2 px-4 py-3 text-sm font-semibold capitalize transition-colors ${
                   deliveryType === type
                     ? 'border-brand bg-red-50 text-red-700'
                     : 'border-gray-200 text-gray-600'
                 }`}
+                onClick={() => setDeliveryType(type)}
+                type="button"
               >
                 {type === 'retiro' ? 'Retiro' : 'Delivery'}
               </button>
@@ -155,8 +202,8 @@ export default function CheckoutPage() {
 
         {deliveryType === 'delivery' && isAuthenticated ? (
           <SectionCard
-            title="Direccion de entrega"
             description="Usa una direccion guardada para calcular cobertura y costo."
+            title="Direccion de entrega"
           >
             {!addresses.length ? (
               <Button fullWidth onClick={() => navigate(APP_ROUTES.account)} variant="secondary">
@@ -167,12 +214,13 @@ export default function CheckoutPage() {
                 {addresses.map((address) => (
                   <button
                     key={address.id}
-                    onClick={() => setSelectedAddressId(address.id)}
                     className={`w-full rounded-2xl border-2 p-3 text-left transition-colors ${
                       selectedAddressId === address.id
                         ? 'border-brand bg-red-50'
                         : 'border-gray-200 bg-white'
                     }`}
+                    onClick={() => setSelectedAddressId(address.id)}
+                    type="button"
                   >
                     <p className="text-sm font-semibold text-gray-900">{address.label}</p>
                     <p className="mt-1 text-xs text-gray-500">
@@ -186,7 +234,9 @@ export default function CheckoutPage() {
             {deliveryInfo && selectedAddressId ? (
               <div
                 className={`mt-3 rounded-2xl px-3 py-3 text-sm ${
-                  deliveryInfo.is_available ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  deliveryInfo.is_available
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-red-50 text-red-700'
                 }`}
               >
                 {deliveryInfo.is_available
@@ -198,25 +248,30 @@ export default function CheckoutPage() {
         ) : null}
 
         {!isAuthenticated ? (
-          <SectionCard title="Tus datos" description="Necesitamos un contacto para confirmar el pedido.">
+          <SectionCard
+            description="Necesitamos un contacto para confirmar el pedido."
+            title="Tus datos"
+          >
             <div className="space-y-3">
-              <input
-                className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                onChange={(event) => setGuestEmail(event.target.value)}
-                placeholder="Email para confirmacion *"
+              <FormInput
+                error={errors.guestEmail?.message}
+                label="Email para confirmacion"
                 type="email"
-                value={guestEmail}
+                {...register('guestEmail')}
               />
-              <input
-                className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                onChange={(event) => setGuestPhone(event.target.value)}
-                placeholder="Telefono"
+              <FormInput
+                error={errors.guestPhone?.message}
+                label="Telefono"
                 type="tel"
-                value={guestPhone}
+                {...register('guestPhone')}
               />
               <p className="text-sm text-gray-500">
                 Ya tienes cuenta:{' '}
-                <button className="font-semibold text-brand" onClick={() => navigate(APP_ROUTES.login)}>
+                <button
+                  className="font-semibold text-brand"
+                  onClick={() => navigate(APP_ROUTES.login)}
+                  type="button"
+                >
                   Inicia sesion
                 </button>
               </p>
@@ -231,31 +286,36 @@ export default function CheckoutPage() {
                 <p className="text-sm font-semibold text-green-700">{couponCode}</p>
                 <p className="text-xs text-green-600">-{formatCLP(couponDiscount)}</p>
               </div>
-              <Button onClick={clearCoupon} variant="ghost">
+              <Button onClick={clearCoupon} type="button" variant="ghost">
                 Quitar
               </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                className="flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-brand"
-                onChange={(event) => setCouponInput(event.target.value)}
+              <FormInput
+                className="uppercase"
+                error={errors.couponInput?.message}
+                label="Cupon"
                 placeholder="Ingresa tu cupon"
-                value={couponInput}
+                {...register('couponInput')}
               />
-              <Button disabled={!couponInput.trim() || validatingCoupon} onClick={() => void handleCoupon()}>
-                {validatingCoupon ? 'Validando...' : 'Aplicar'}
-              </Button>
+              <div className="sm:pt-6">
+                <Button
+                  disabled={!watchedCouponInput?.trim() || validatingCoupon}
+                  onClick={() => void handleCoupon()}
+                  type="button"
+                >
+                  {validatingCoupon ? 'Validando...' : 'Aplicar'}
+                </Button>
+              </div>
             </div>
           )}
-
-          {couponError ? <p className="mt-2 text-sm text-red-600">{couponError}</p> : null}
         </SectionCard>
 
         {isAuthenticated && user?.points_balance ? (
           <SectionCard
-            title="Usar puntos"
             description={`Disponible: ${user.points_balance} pts (${formatCLP(user.points_balance)}).`}
+            title="Usar puntos"
           >
             <input
               className="w-full accent-red-600"
@@ -276,21 +336,32 @@ export default function CheckoutPage() {
         ) : null}
 
         <SectionCard title="Notas del pedido">
-          <textarea
-            className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Instrucciones, alergias o aclaraciones para cocina."
+          <FormTextarea
+            className="resize-none"
+            error={errors.notes?.message}
+            label="Instrucciones"
             rows={3}
-            value={notes}
+            {...register('notes')}
           />
         </SectionCard>
 
         <SectionCard title="Resumen">
           <div className="space-y-2 text-sm">
             <SummaryRow label="Subtotal" value={formatCLP(subtotalAmount)} />
-            <SummaryRow label="Envio" value={deliveryFee ? formatCLP(deliveryFee) : 'Se calcula segun despacho'} />
-            {couponDiscount > 0 ? <SummaryRow emphasis label={`Cupon ${couponCode}`} value={`-${formatCLP(couponDiscount)}`} /> : null}
-            {pointsToUse > 0 ? <SummaryRow emphasis label="Puntos usados" value={`-${formatCLP(pointsToUse)}`} /> : null}
+            <SummaryRow
+              label="Envio"
+              value={deliveryFee ? formatCLP(deliveryFee) : 'Se calcula segun despacho'}
+            />
+            {couponDiscount > 0 ? (
+              <SummaryRow
+                emphasis
+                label={`Cupon ${couponCode}`}
+                value={`-${formatCLP(couponDiscount)}`}
+              />
+            ) : null}
+            {pointsToUse > 0 ? (
+              <SummaryRow emphasis label="Puntos usados" value={`-${formatCLP(pointsToUse)}`} />
+            ) : null}
             <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-base font-bold text-gray-900">
               <span>Total</span>
               <span className="text-brand">{formatCLP(total)}</span>
@@ -298,20 +369,10 @@ export default function CheckoutPage() {
           </div>
         </SectionCard>
 
-        {submitError ? (
-          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {submitError}
-          </div>
-        ) : null}
-
-        <Button
-          disabled={isPending || Boolean(validationMessage)}
-          fullWidth
-          onClick={() => void handleSubmit()}
-        >
+        <Button disabled={isPending || Boolean(validationMessage)} fullWidth type="submit">
           {isPending ? 'Procesando...' : `Pagar ${formatCLP(total)}`}
         </Button>
-      </div>
+      </form>
     </div>
   );
 }
@@ -326,7 +387,9 @@ function SummaryRow({
   value: string;
 }) {
   return (
-    <div className={`flex items-center justify-between ${emphasis ? 'text-green-600' : 'text-gray-600'}`}>
+    <div
+      className={`flex items-center justify-between ${emphasis ? 'text-green-600' : 'text-gray-600'}`}
+    >
       <span>{label}</span>
       <span className="font-medium">{value}</span>
     </div>

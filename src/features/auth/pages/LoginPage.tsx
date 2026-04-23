@@ -1,25 +1,47 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { getApiErrorMessage } from '@/shared/api/errors';
 import { useLogin } from '@/shared/hooks';
+import { FormInput, type LoginFormValues, loginSchema } from '@/shared/forms';
+import { useToast } from '@/shared/toast';
 import { BackButton, Button, PageHeader } from '@/shared/ui';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { pushToast } = useToast();
   const { mutateAsync: login, isPending } = useLogin();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const {
+    formState: { errors, isValid },
+    handleSubmit,
+    register,
+  } = useForm<LoginFormValues>({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    mode: 'onChange',
+    resolver: zodResolver(loginSchema),
+  });
 
-  const handleSubmit = async () => {
-    setError('');
-
+  const handleLogin = async (values: LoginFormValues) => {
     try {
-      await login({ email, password });
-      navigate('/');
+      await login(values);
+      pushToast({
+        tone: 'success',
+        title: 'Sesion iniciada',
+        description: 'Bienvenido de vuelta.',
+      });
+      const nextPath = location.state?.from?.pathname ?? '/';
+      navigate(nextPath);
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Email o contrasena incorrectos.'));
+      pushToast({
+        tone: 'error',
+        title: 'No pudimos iniciar sesion',
+        description: getApiErrorMessage(requestError, 'Email o contrasena incorrectos.'),
+      });
     }
   };
 
@@ -32,38 +54,31 @@ export default function LoginPage() {
           <h2 className="text-3xl font-black text-gray-900">
             Yak<span className="text-brand">ero</span>
           </h2>
-          <p className="mt-2 text-sm text-gray-500">Ingresa a tu cuenta para revisar pedidos y puntos.</p>
+          <p className="mt-2 text-sm text-gray-500">
+            Ingresa a tu cuenta para revisar pedidos y puntos.
+          </p>
         </div>
 
-        {error ? (
-          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        ) : null}
+        <form className="space-y-4" onSubmit={handleSubmit(handleLogin)}>
+          <FormInput
+            autoComplete="email"
+            error={errors.email?.message}
+            label="Email"
+            type="email"
+            {...register('email')}
+          />
+          <FormInput
+            autoComplete="current-password"
+            error={errors.password?.message}
+            label="Contrasena"
+            type="password"
+            {...register('password')}
+          />
 
-        <input
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email"
-          type="email"
-          value={email}
-        />
-        <input
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-          onChange={(event) => setPassword(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              void handleSubmit();
-            }
-          }}
-          placeholder="Contrasena"
-          type="password"
-          value={password}
-        />
-
-        <Button disabled={!email || !password || isPending} fullWidth onClick={() => void handleSubmit()}>
-          {isPending ? 'Ingresando...' : 'Ingresar'}
-        </Button>
+          <Button disabled={!isValid || isPending} fullWidth type="submit">
+            {isPending ? 'Ingresando...' : 'Ingresar'}
+          </Button>
+        </form>
 
         <p className="text-center text-sm text-gray-500">
           Aun no tienes cuenta:{' '}

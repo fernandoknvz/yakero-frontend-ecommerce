@@ -1,1 +1,1 @@
-styles.d.ts
+export {};

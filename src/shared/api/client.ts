@@ -1,8 +1,9 @@
 import axios, { AxiosError } from 'axios';
 
 import { env } from '@/config/env';
-import { APP_ROUTES } from '@/shared/constants/routes';
+import { emitAuthExpired } from '@/shared/lib/appEvents';
 import { STORAGE_KEYS } from '@/shared/constants/storage';
+import { useAuthStore } from '@/stores/authStore';
 import type { ApiError } from '@/types';
 
 export const apiClient = axios.create({
@@ -24,9 +25,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(STORAGE_KEYS.token);
+      useAuthStore.getState().logout();
       localStorage.removeItem(STORAGE_KEYS.auth);
-      window.location.assign(APP_ROUTES.login);
+      localStorage.removeItem(STORAGE_KEYS.token);
+      emitAuthExpired();
     }
 
     return Promise.reject(error);

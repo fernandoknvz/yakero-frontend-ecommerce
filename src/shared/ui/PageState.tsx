@@ -9,7 +9,13 @@ interface LoadingStateProps {
 
 export function LoadingState({ label = 'Cargando...', fullScreen = false }: LoadingStateProps) {
   return (
-    <div className={fullScreen ? 'flex min-h-screen items-center justify-center px-4' : 'flex justify-center py-12'}>
+    <div
+      className={
+        fullScreen
+          ? 'flex min-h-screen items-center justify-center px-4'
+          : 'flex justify-center py-12'
+      }
+    >
       <div className="flex flex-col items-center gap-3 text-sm text-gray-500">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-brand" />
         <span>{label}</span>

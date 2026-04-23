@@ -7,16 +7,16 @@ Arquitectura por features, estado con Zustand + React Query, UX mobile-first.
 
 ## Stack
 
-| Capa | Tecnología |
-|---|---|
-| Framework | React 18 |
-| Build | Vite 5 |
-| Tipado | TypeScript 5 |
-| Routing | React Router 6 |
+| Capa         | Tecnología             |
+| ------------ | ---------------------- |
+| Framework    | React 18               |
+| Build        | Vite 5                 |
+| Tipado       | TypeScript 5           |
+| Routing      | React Router 6         |
 | Server state | TanStack React Query 5 |
-| Client state | Zustand 5 |
-| HTTP | Axios |
-| Estilos | Tailwind CSS 3 |
+| Client state | Zustand 5              |
+| HTTP         | Axios                  |
+| Estilos      | Tailwind CSS 3         |
 
 ---
 
@@ -67,18 +67,18 @@ src/
 
 ## Pantallas
 
-| Ruta | Componente | Descripción |
-|---|---|---|
-| `/` | `HomePage` | Menú completo con navegación por categorías |
-| `/checkout` | `CheckoutPage` | Delivery/retiro, dirección, cupón, puntos, pago |
-| `/checkout/success` | `PaymentSuccessPage` | Confirmación de pago aprobado |
-| `/checkout/failure` | `PaymentFailurePage` | Pago rechazado con opción de reintento |
-| `/checkout/pending` | `PaymentPendingPage` | Pago en proceso |
-| `/orders/:id` | `OrderTrackingPage` | Seguimiento en tiempo real (polling 15s) |
-| `/account/orders` | `OrderHistoryPage` | Historial con pedidos activos destacados |
-| `/account` | `ProfilePage` | Perfil, puntos, direcciones |
-| `/login` | `LoginPage` | Login con JWT |
-| `/register` | `RegisterPage` | Registro de cuenta |
+| Ruta                | Componente           | Descripción                                     |
+| ------------------- | -------------------- | ----------------------------------------------- |
+| `/`                 | `HomePage`           | Menú completo con navegación por categorías     |
+| `/checkout`         | `CheckoutPage`       | Delivery/retiro, dirección, cupón, puntos, pago |
+| `/checkout/success` | `PaymentSuccessPage` | Confirmación de pago aprobado                   |
+| `/checkout/failure` | `PaymentFailurePage` | Pago rechazado con opción de reintento          |
+| `/checkout/pending` | `PaymentPendingPage` | Pago en proceso                                 |
+| `/orders/:id`       | `OrderTrackingPage`  | Seguimiento en tiempo real (polling 15s)        |
+| `/account/orders`   | `OrderHistoryPage`   | Historial con pedidos activos destacados        |
+| `/account`          | `ProfilePage`        | Perfil, puntos, direcciones                     |
+| `/login`            | `LoginPage`          | Login con JWT                                   |
+| `/register`         | `RegisterPage`       | Registro de cuenta                              |
 
 ---
 

@@ -19,7 +19,11 @@ export function PromotionCard({ promotion, onSelect }: PromotionCardProps) {
       <div className="flex min-h-32 gap-4 p-4">
         <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-gray-100">
           {promotion.image_url ? (
-            <img alt={promotion.name} className="h-full w-full object-cover" src={promotion.image_url} />
+            <img
+              alt={promotion.name}
+              className="h-full w-full object-cover"
+              src={promotion.image_url}
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl text-gray-400">
               %
@@ -32,7 +36,9 @@ export function PromotionCard({ promotion, onSelect }: PromotionCardProps) {
             <span className="rounded-full bg-red-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-red-700">
               Promo
             </span>
-            {totalPieces > 0 ? <span className="text-xs text-gray-500">{totalPieces} piezas</span> : null}
+            {totalPieces > 0 ? (
+              <span className="text-xs text-gray-500">{totalPieces} piezas</span>
+            ) : null}
           </div>
 
           <h3 className="mt-3 text-base font-bold text-gray-900">{promotion.name}</h3>

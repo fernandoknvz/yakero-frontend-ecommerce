@@ -11,13 +11,7 @@ import { ProductCard } from '../components/ProductCard';
 import { ProductModal } from '../components/ProductModal';
 
 export default function HomePage() {
-  const {
-    data: categories,
-    error,
-    isError,
-    isLoading,
-    refetch,
-  } = useMenu();
+  const { data: categories, error, isError, isLoading, refetch } = useMenu();
   const { data: promotions } = usePromotions();
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -73,7 +67,9 @@ export default function HomePage() {
           {promotions?.length ? (
             <button
               className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white"
-              onClick={() => document.getElementById('promotions')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() =>
+                document.getElementById('promotions')?.scrollIntoView({ behavior: 'smooth' })
+              }
             >
               Promos
             </button>
@@ -137,7 +133,11 @@ export default function HomePage() {
       <CartFab />
 
       {selectedProduct ? (
-        <ProductModal onClose={() => setSelectedProduct(null)} product={selectedProduct} />
+        <ProductModal
+          key={selectedProduct.id}
+          onClose={() => setSelectedProduct(null)}
+          product={selectedProduct}
+        />
       ) : null}
     </div>
   );

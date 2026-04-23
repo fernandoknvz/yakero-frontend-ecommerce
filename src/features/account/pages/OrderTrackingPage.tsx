@@ -47,7 +47,10 @@ export default function OrderTrackingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-      <PageHeader leading={<BackButton onClick={() => navigate('/')} />} title={`Pedido #${order.id}`} />
+      <PageHeader
+        leading={<BackButton onClick={() => navigate('/')} />}
+        title={`Pedido #${order.id}`}
+      />
 
       <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <SectionCard>
@@ -62,8 +65,12 @@ export default function OrderTrackingPage() {
                 month: 'long',
               })}
             </p>
-            {['pendiente', 'pagado', 'en_preparacion', 'listo', 'despachado'].includes(order.status) ? (
-              <p className="mt-3 text-xs text-gray-400">Actualizando automaticamente cada 15 segundos.</p>
+            {['pendiente', 'pagado', 'en_preparacion', 'listo', 'despachado'].includes(
+              order.status
+            ) ? (
+              <p className="mt-3 text-xs text-gray-400">
+                Actualizando automaticamente cada 15 segundos.
+              </p>
             ) : null}
           </div>
         </SectionCard>
@@ -80,7 +87,7 @@ export default function OrderTrackingPage() {
                         : 'border-gray-200 bg-white text-gray-300'
                     }`}
                   >
-                    {index < config.step ? '✓' : index + 1}
+                    {index < config.step ? 'OK' : index + 1}
                   </div>
                   <span
                     className={`mt-2 text-center text-xs ${
@@ -114,9 +121,13 @@ export default function OrderTrackingPage() {
                       {item.modifiers.map((modifier) => modifier.option_name).join(', ')}
                     </p>
                   ) : null}
-                  {item.notes ? <p className="mt-1 text-xs italic text-gray-400">"{item.notes}"</p> : null}
+                  {item.notes ? (
+                    <p className="mt-1 text-xs italic text-gray-400">{`"${item.notes}"`}</p>
+                  ) : null}
                 </div>
-                <span className="text-sm font-semibold text-gray-700">{formatCLP(item.total_price)}</span>
+                <span className="text-sm font-semibold text-gray-700">
+                  {formatCLP(item.total_price)}
+                </span>
               </div>
             ))}
           </div>

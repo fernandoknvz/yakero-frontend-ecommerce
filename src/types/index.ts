@@ -151,12 +151,12 @@ export interface SelectedModifier {
 }
 
 export interface CartItem {
-  cartItemId: string;            // uuid local para identificar en el carrito
+  cartItemId: string; // uuid local para identificar en el carrito
   product?: Product;
   promotion?: Promotion;
   promotion_slot_id?: number;
   quantity: number;
-  unit_price: number;            // precio base + extras
+  unit_price: number; // precio base + extras
   selected_modifiers: SelectedModifier[];
   notes?: string;
 }

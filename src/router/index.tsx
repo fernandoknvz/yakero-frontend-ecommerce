@@ -8,6 +8,7 @@ import {
   PaymentPendingPage,
   PaymentSuccessPage,
 } from '../features/checkout/pages/PaymentResultPages';
+import { ProtectedRoute, PublicOnlyRoute } from './guards';
 import AppLayout from './AppLayout';
 
 const HomePage = lazy(() => import('../features/menu/pages/HomePage'));
@@ -31,14 +32,24 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: wrap(HomePage) },
       { path: 'checkout', element: wrap(CheckoutPage) },
-      { path: 'login', element: wrap(LoginPage) },
-      { path: 'register', element: wrap(RegisterPage) },
       { path: 'orders/:id', element: wrap(OrderTrackingPage) },
-      { path: 'account/orders', element: wrap(OrderHistoryPage) },
-      { path: 'account', element: wrap(ProfilePage) },
       { path: 'checkout/success', element: <PaymentSuccessPage /> },
       { path: 'checkout/failure', element: <PaymentFailurePage /> },
       { path: 'checkout/pending', element: <PaymentPendingPage /> },
+      {
+        element: <PublicOnlyRoute />,
+        children: [
+          { path: 'login', element: wrap(LoginPage) },
+          { path: 'register', element: wrap(RegisterPage) },
+        ],
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: 'account/orders', element: wrap(OrderHistoryPage) },
+          { path: 'account', element: wrap(ProfilePage) },
+        ],
+      },
     ],
   },
 ]);
