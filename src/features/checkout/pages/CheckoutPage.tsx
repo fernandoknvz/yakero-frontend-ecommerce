@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router-dom';
 
-import { env } from '@/config/env';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { getApiErrorMessage } from '@/shared/api/errors';
 import { APP_ROUTES } from '@/shared/constants/routes';
@@ -16,6 +15,7 @@ import {
 import {
   useAddresses,
   useCreateOrder,
+  useCreatePaymentPreference,
   useDeliveryFee,
   useOrderPreview,
   useValidateCoupon,
@@ -30,7 +30,6 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { pushToast } = useToast();
   const {
-    clearCart,
     clearCoupon,
     couponCode,
     couponDiscount,
@@ -68,6 +67,8 @@ export default function CheckoutPage() {
     deliveryType === 'delivery' ? selectedAddress?.longitude : undefined
   );
   const { mutateAsync: createOrder, isPending } = useCreateOrder();
+  const { mutateAsync: createPaymentPreference, isPending: isCreatingPreference } =
+    useCreatePaymentPreference();
   const { mutateAsync: validateCoupon, isPending: validatingCoupon } = useValidateCoupon();
   const watchedCouponInput = useWatch({
     control,
@@ -147,6 +148,7 @@ export default function CheckoutPage() {
   const total = orderPreview?.total ?? Math.max(subtotalAmount - couponDiscount - pointsToUse, 0);
   const submitBlocked =
     Boolean(validationMessage) || isPreviewError || isPreviewFetching || !orderPreview;
+  const isSubmittingPayment = isPending || isCreatingPreference;
 
   if (!items.length) {
     return <Navigate replace to={APP_ROUTES.home} />;
@@ -204,24 +206,28 @@ export default function CheckoutPage() {
 
     try {
       const order = await createOrder(payload);
-      clearCart();
       pushToast({
         tone: 'success',
         title: 'Pedido creado',
-        description: 'Te estamos redirigiendo al siguiente paso.',
+        description: 'Redirigiendo a Mercado Pago...',
       });
 
-      if (order.mp_preference_id) {
-        window.location.assign(`${env.mercadoPagoCheckoutUrl}?pref_id=${order.mp_preference_id}`);
-        return;
+      const preference = await createPaymentPreference({ order_id: order.id });
+      const paymentUrl = preference.sandbox_init_point || preference.init_point;
+
+      if (!paymentUrl) {
+        throw new Error('No recibimos una URL de pago valida.');
       }
 
-      navigate(`/orders/${order.id}`);
+      window.location.assign(paymentUrl);
     } catch (error) {
       pushToast({
         tone: 'error',
-        title: 'No pudimos crear el pedido',
-        description: getApiErrorMessage(error),
+        title: 'No pudimos iniciar el pago',
+        description: getApiErrorMessage(
+          error,
+          'Tu pedido fue creado, pero no pudimos abrir Mercado Pago.'
+        ),
       });
     }
   };
@@ -493,8 +499,8 @@ export default function CheckoutPage() {
           </div>
         </SectionCard>
 
-        <Button disabled={isPending || submitBlocked} fullWidth type="submit">
-          {isPending ? 'Procesando...' : `Pagar ${formatCLP(total)}`}
+        <Button disabled={isSubmittingPayment || submitBlocked} fullWidth type="submit">
+          {isSubmittingPayment ? 'Redirigiendo a Mercado Pago...' : `Pagar ${formatCLP(total)}`}
         </Button>
       </form>
     </div>

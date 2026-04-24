@@ -10,6 +10,7 @@ import type { Product } from '@/types';
 import CheckoutPage from './CheckoutPage';
 
 const mockCreateOrder = vi.fn();
+const mockCreatePaymentPreference = vi.fn();
 
 type PreviewState = {
   data?: {
@@ -58,6 +59,10 @@ vi.mock('@/shared/hooks', async () => {
     ...actual,
     useAddresses: () => ({ data: [] }),
     useCreateOrder: () => ({ isPending: false, mutateAsync: mockCreateOrder }),
+    useCreatePaymentPreference: () => ({
+      isPending: false,
+      mutateAsync: mockCreatePaymentPreference,
+    }),
     useDeliveryFee: () => ({ data: undefined }),
     useOrderPreview: () => mockPreviewState,
     useValidateCoupon: () => ({ isPending: false, mutateAsync: vi.fn() }),
@@ -81,6 +86,13 @@ describe('CheckoutPage', () => {
   beforeEach(() => {
     mockCreateOrder.mockReset();
     mockCreateOrder.mockResolvedValue({ id: 123 });
+    mockCreatePaymentPreference.mockReset();
+    mockCreatePaymentPreference.mockResolvedValue({
+      init_point: 'https://www.mercadopago.cl/checkout',
+      order_id: 123,
+      preference_id: 'pref-123',
+      sandbox_init_point: 'https://sandbox.mercadopago.cl/checkout',
+    });
     mockPreviewState = {
       data: {
         delivery_fee: 0,
@@ -135,5 +147,22 @@ describe('CheckoutPage', () => {
 
     expect(screen.getByText('Producto no disponible')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /pagar/i })).toBeDisabled();
+  });
+
+  it('creates a payment preference after creating the order and redirects to sandbox', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, assign },
+    });
+
+    renderWithProviders(<CheckoutPage />);
+
+    await userEvent.type(screen.getByLabelText('Email para confirmacion'), 'buyer@example.com');
+    await userEvent.click(screen.getByRole('button', { name: /pagar/i }));
+
+    expect(mockCreateOrder).toHaveBeenCalled();
+    expect(mockCreatePaymentPreference).toHaveBeenCalledWith({ order_id: 123 });
+    expect(assign).toHaveBeenCalledWith('https://sandbox.mercadopago.cl/checkout');
   });
 });

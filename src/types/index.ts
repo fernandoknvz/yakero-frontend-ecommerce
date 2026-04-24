@@ -243,6 +243,17 @@ export interface OrderPreviewOut {
   notes?: string;
 }
 
+export interface CreatePaymentPreferenceInput {
+  order_id: number;
+}
+
+export interface PaymentPreferenceOut {
+  preference_id: string;
+  init_point: string;
+  sandbox_init_point?: string;
+  order_id: number;
+}
+
 export interface OrderItemInput {
   product_id?: number;
   promotion_id?: number;

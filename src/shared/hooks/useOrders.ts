@@ -39,14 +39,14 @@ export function useMyOrders() {
   });
 }
 
-export function useOrder(id: number) {
+export function useOrder(id: number, refetchIntervalMs = 15_000) {
   return useQuery({
     queryKey: queryKeys.order(id),
     queryFn: () => ordersApi.getOrder(id),
     enabled: Number.isFinite(id) && id > 0,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status && terminalStatuses.includes(status) ? false : 15_000;
+      return status && terminalStatuses.includes(status) ? false : refetchIntervalMs;
     },
   });
 }
