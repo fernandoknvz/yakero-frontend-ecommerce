@@ -2,7 +2,11 @@ import axios, { AxiosError } from 'axios';
 
 import { env } from '@/config/env';
 import { emitAuthExpired } from '@/shared/lib/appEvents';
-import { STORAGE_KEYS } from '@/shared/constants/storage';
+import {
+  clearStoredAccessToken,
+  getStoredAccessToken,
+  STORAGE_KEYS,
+} from '@/shared/constants/storage';
 import { useAuthStore } from '@/stores/authStore';
 import type { ApiError } from '@/types';
 
@@ -12,10 +16,10 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE_KEYS.token);
+  const accessToken = getStoredAccessToken();
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
   return config;
@@ -27,7 +31,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
       localStorage.removeItem(STORAGE_KEYS.auth);
-      localStorage.removeItem(STORAGE_KEYS.token);
+      clearStoredAccessToken();
       emitAuthExpired();
     }
 

@@ -7,7 +7,7 @@ import { useAuthStore } from './authStore';
 describe('authStore', () => {
   beforeEach(() => {
     localStorage.clear();
-    useAuthStore.setState({ isAuthenticated: false, token: null, user: null });
+    useAuthStore.setState({ accessToken: null, isAuthenticated: false, user: null });
   });
 
   it('stores auth token and marks user as authenticated', () => {
@@ -22,7 +22,7 @@ describe('authStore', () => {
     });
 
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
-    expect(localStorage.getItem(STORAGE_KEYS.token)).toBe('token-123');
+    expect(localStorage.getItem(STORAGE_KEYS.accessToken)).toBe('token-123');
   });
 
   it('clears auth state on logout', () => {
@@ -39,6 +39,6 @@ describe('authStore', () => {
     useAuthStore.getState().logout();
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
-    expect(localStorage.getItem(STORAGE_KEYS.token)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.accessToken)).toBeNull();
   });
 });

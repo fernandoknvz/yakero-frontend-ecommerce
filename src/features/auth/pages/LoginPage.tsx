@@ -14,7 +14,7 @@ export default function LoginPage() {
   const { pushToast } = useToast();
   const { mutateAsync: login, isPending } = useLogin();
   const {
-    formState: { errors, isValid },
+    formState: { errors },
     handleSubmit,
     register,
   } = useForm<LoginFormValues>({
@@ -28,7 +28,10 @@ export default function LoginPage() {
 
   const handleLogin = async (values: LoginFormValues) => {
     try {
-      await login(values);
+      await login({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+      });
       pushToast({
         tone: 'success',
         title: 'Sesion iniciada',
@@ -75,7 +78,7 @@ export default function LoginPage() {
             {...register('password')}
           />
 
-          <Button disabled={!isValid || isPending} fullWidth type="submit">
+          <Button disabled={isPending} fullWidth type="submit">
             {isPending ? 'Ingresando...' : 'Ingresar'}
           </Button>
         </form>

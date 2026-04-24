@@ -8,7 +8,7 @@ import { ProtectedRoute, PublicOnlyRoute } from './guards';
 
 describe('route guards', () => {
   afterEach(() => {
-    useAuthStore.setState({ isAuthenticated: false, token: null, user: null });
+    useAuthStore.setState({ accessToken: null, isAuthenticated: false, user: null });
   });
 
   it('redirects guests away from protected routes', () => {
@@ -28,7 +28,7 @@ describe('route guards', () => {
   it('redirects authenticated users away from public-only routes', () => {
     useAuthStore.setState({
       isAuthenticated: true,
-      token: 'token',
+      accessToken: 'token',
       user: {
         created_at: '',
         email: 'user@example.com',

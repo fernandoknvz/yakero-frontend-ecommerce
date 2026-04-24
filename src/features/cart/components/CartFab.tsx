@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CartItem } from '@/types';
 
 import { APP_ROUTES } from '@/shared/constants/routes';
+import { useToast } from '@/shared/toast';
 import { Button } from '@/shared/ui';
 import { formatCLP } from '@/shared/utils/format';
 
@@ -36,8 +37,9 @@ export function CartFab() {
 }
 
 function CartDrawer({ onClose }: { onClose: () => void }) {
-  const { items, subtotal, removeItem, updateQuantity } = useCartStore();
+  const { clearCart, items, subtotal, removeItem, updateQuantity } = useCartStore();
   const navigate = useNavigate();
+  const { pushToast } = useToast();
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -50,9 +52,21 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
       <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 p-4">
           <h2 className="text-lg font-bold text-gray-900">Tu pedido</h2>
-          <Button className="h-10 w-10 rounded-full px-0" onClick={onClose} variant="ghost">
-            x
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                clearCart();
+                pushToast({ tone: 'success', title: 'Carrito limpiado' });
+                onClose();
+              }}
+              variant="ghost"
+            >
+              Limpiar
+            </Button>
+            <Button className="h-10 w-10 rounded-full px-0" onClick={onClose} variant="ghost">
+              x
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -99,13 +113,32 @@ function CartItemRow({
   onRemove: () => void;
 }) {
   const name = item.product?.name ?? item.promotion?.name ?? 'Item';
-  const modifiers = item.selected_modifiers.map((modifier) => modifier.option_name).join(', ');
+  const imageUrl = item.product?.image_url ?? item.promotion?.image_url;
 
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-gray-50 p-3">
+      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-gray-100">
+        {imageUrl ? (
+          <img alt="" className="h-full w-full object-cover" src={imageUrl} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-gray-400">□</div>
+        )}
+      </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
-        {modifiers ? <p className="mt-1 truncate text-xs text-gray-500">{modifiers}</p> : null}
+        {item.selected_modifiers.length ? (
+          <div className="mt-1 space-y-0.5">
+            {item.selected_modifiers.map((modifier) => (
+              <p
+                key={`${item.cartItemId}-${modifier.modifier_option_id}`}
+                className="truncate text-xs text-gray-500"
+              >
+                {modifier.group_name}: {modifier.option_name}
+                {modifier.extra_price ? ` (+${formatCLP(modifier.extra_price)})` : ''}
+              </p>
+            ))}
+          </div>
+        ) : null}
         {item.notes ? (
           <p className="mt-1 text-xs italic text-gray-400">{`"${item.notes}"`}</p>
         ) : null}

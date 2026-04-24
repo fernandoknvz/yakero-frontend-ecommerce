@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
-import { STORAGE_KEYS } from '../shared/constants/storage';
+import {
+  clearStoredAccessToken,
+  getStoredAccessToken,
+  setStoredAccessToken,
+  STORAGE_KEYS,
+} from '../shared/constants/storage';
 
 interface AuthState {
-  token: string | null;
+  accessToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
-  setAuth: (token: string, user: User) => void;
+  setAccessToken: (accessToken: string) => void;
+  setAuth: (accessToken: string, user: User) => void;
   setUser: (user: User) => void;
   logout: () => void;
 }
@@ -15,25 +21,34 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
+      accessToken: getStoredAccessToken(),
       user: null,
-      isAuthenticated: false,
-      setAuth: (token, user) => {
-        localStorage.setItem(STORAGE_KEYS.token, token);
-        set({ token, user, isAuthenticated: true });
+      isAuthenticated: Boolean(getStoredAccessToken()),
+      setAccessToken: (accessToken) => {
+        setStoredAccessToken(accessToken);
+        set({ accessToken, isAuthenticated: true });
+      },
+      setAuth: (accessToken, user) => {
+        setStoredAccessToken(accessToken);
+        set({ accessToken, user, isAuthenticated: true });
       },
       setUser: (user) => set({ user }),
       logout: () => {
-        localStorage.removeItem(STORAGE_KEYS.token);
-        set({ token: null, user: null, isAuthenticated: false });
+        clearStoredAccessToken();
+        set({ accessToken: null, user: null, isAuthenticated: false });
       },
     }),
     {
       name: STORAGE_KEYS.auth,
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({ accessToken: state.accessToken, user: state.user }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.isAuthenticated = Boolean(state.token);
+        const accessToken = state.accessToken ?? getStoredAccessToken();
+        if (accessToken) {
+          setStoredAccessToken(accessToken);
+        }
+        state.accessToken = accessToken;
+        state.isAuthenticated = Boolean(accessToken);
       },
     }
   )

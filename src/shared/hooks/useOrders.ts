@@ -19,6 +19,16 @@ export function useCreateOrder() {
   });
 }
 
+export function useOrderPreview(payload: CreateOrderInput | null) {
+  return useQuery({
+    queryKey: queryKeys.orderPreview(payload),
+    queryFn: () => ordersApi.preview(payload!),
+    enabled: Boolean(payload?.items.length),
+    retry: false,
+    staleTime: 15 * 1000,
+  });
+}
+
 export function useMyOrders() {
   const { isAuthenticated } = useAuthStore();
 

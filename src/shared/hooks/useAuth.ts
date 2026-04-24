@@ -7,38 +7,40 @@ import { authApi } from '@/shared/api/services';
 import { useAuthStore } from '@/stores/authStore';
 
 export function useRegister() {
-  const { setAuth } = useAuthStore();
+  const { setAccessToken, setAuth } = useAuthStore();
 
   return useMutation({
     mutationFn: (data: RegisterInput) => authApi.register(data),
-    onSuccess: async (token) => {
+    onSuccess: async (tokenResponse) => {
+      setAccessToken(tokenResponse.access_token);
       const user = await authApi.me();
-      setAuth(token.access_token, user);
+      setAuth(tokenResponse.access_token, user);
     },
   });
 }
 
 export function useLogin() {
-  const { setAuth } = useAuthStore();
+  const { setAccessToken, setAuth } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: LoginInput) => authApi.login(data),
-    onSuccess: async (token) => {
+    onSuccess: async (tokenResponse) => {
+      setAccessToken(tokenResponse.access_token);
       const user = await authApi.me();
-      setAuth(token.access_token, user);
+      setAuth(tokenResponse.access_token, user);
       queryClient.invalidateQueries({ queryKey: queryKeys.me });
     },
   });
 }
 
 export function useMe() {
-  const { isAuthenticated } = useAuthStore();
+  const { accessToken } = useAuthStore();
 
   return useQuery({
     queryKey: queryKeys.me,
     queryFn: authApi.me,
-    enabled: isAuthenticated,
+    enabled: Boolean(accessToken),
     staleTime: 10 * 60 * 1000,
   });
 }

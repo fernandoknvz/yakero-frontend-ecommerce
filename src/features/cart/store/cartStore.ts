@@ -51,6 +51,7 @@ export const useCartStore = create<CartState>()(
         const existing = get().items.find(
           (i) =>
             i.product?.id === product.id &&
+            (i.notes ?? '') === (notes ?? '') &&
             JSON.stringify(i.selected_modifiers.map((m) => m.modifier_option_id).sort()) ===
               JSON.stringify(selectedModifiers.map((m) => m.modifier_option_id).sort())
         );

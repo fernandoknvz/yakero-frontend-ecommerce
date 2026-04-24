@@ -1,11 +1,9 @@
 import { useCartStore } from '@/features/cart/store/cartStore';
-import { FormTextarea } from '@/shared/forms';
+import { useToast } from '@/shared/toast';
 import type { Product } from '@/types';
 
-import { ProductModalFooter } from './product-modal/ProductModalFooter';
+import { ProductConfigurator } from './ProductConfigurator';
 import { ProductModalHeader } from './product-modal/ProductModalHeader';
-import { ProductModifierGroup } from './product-modal/ProductModifierGroup';
-import { useProductConfiguration } from './product-modal/useProductConfiguration';
 
 interface ProductModalProps {
   onClose: () => void;
@@ -14,25 +12,7 @@ interface ProductModalProps {
 
 export function ProductModal({ onClose, product }: ProductModalProps) {
   const { addProduct } = useCartStore();
-  const {
-    errors,
-    notes,
-    quantity,
-    selectedModifiers,
-    selections,
-    setNotes,
-    setQuantity,
-    toggleOption,
-    unitPrice,
-    validate,
-  } = useProductConfiguration(product);
-
-  const handleAdd = () => {
-    if (!validate()) return;
-
-    addProduct(product, quantity, selectedModifiers, notes || undefined);
-    onClose();
-  };
+  const { pushToast } = useToast();
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
@@ -47,32 +27,19 @@ export function ProductModal({ onClose, product }: ProductModalProps) {
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           <ProductModalHeader onClose={onClose} product={product} />
 
-          {product.modifier_groups.map((group) => (
-            <ProductModifierGroup
-              key={group.id}
-              error={errors[group.id]}
-              group={group}
-              onToggle={(optionId) => toggleOption(group, optionId)}
-              selectedOptions={selections[group.id] ?? []}
-            />
-          ))}
-
-          <FormTextarea
-            label="Notas"
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Sin cebolla, extra salsa..."
-            rows={2}
-            value={notes}
+          <ProductConfigurator
+            onAdd={({ notes, quantity, selectedModifiers }) => {
+              addProduct(product, quantity, selectedModifiers, notes);
+              pushToast({
+                tone: 'success',
+                title: 'Producto agregado',
+                description: `${product.name} ya esta en tu carrito.`,
+              });
+              onClose();
+            }}
+            product={product}
           />
         </div>
-
-        <ProductModalFooter
-          onAdd={handleAdd}
-          onDecrease={() => setQuantity((current) => Math.max(1, current - 1))}
-          onIncrease={() => setQuantity((current) => current + 1)}
-          quantity={quantity}
-          totalPrice={unitPrice * quantity}
-        />
       </div>
     </div>
   );

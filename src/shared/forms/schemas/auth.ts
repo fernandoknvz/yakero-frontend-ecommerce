@@ -1,8 +1,12 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.email('Ingresa un email valido.'),
-  password: z.string().min(1, 'Ingresa tu contrasena.'),
+  email: z
+    .string({ error: 'Ingresa tu email.' })
+    .trim()
+    .min(1, 'Ingresa tu email.')
+    .pipe(z.email('Ingresa un email valido.')),
+  password: z.string({ error: 'Ingresa tu contrasena.' }).trim().min(1, 'Ingresa tu contrasena.'),
 });
 
 export const registerSchema = z

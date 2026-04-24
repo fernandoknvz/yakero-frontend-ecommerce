@@ -14,6 +14,9 @@ export function useProductConfiguration(product: Product) {
   const [errors, setErrors] = useState<Record<number, string>>({});
 
   const toggleOption = (group: ModifierGroup, optionId: number) => {
+    const option = group.options.find((currentOption) => currentOption.id === optionId);
+    if (!option?.is_available) return;
+
     setSelections((current) => {
       const selectedOptions = current[group.id] ?? [];
 
@@ -54,6 +57,11 @@ export function useProductConfiguration(product: Product) {
       if (group.is_required && selectedCount < group.min_selections) {
         nextErrors[group.id] =
           `Elige al menos ${group.min_selections} opcion${group.min_selections > 1 ? 'es' : ''}.`;
+      }
+
+      if (selectedCount > group.max_selections) {
+        nextErrors[group.id] =
+          `Elige maximo ${group.max_selections} opcion${group.max_selections > 1 ? 'es' : ''}.`;
       }
     });
 

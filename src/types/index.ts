@@ -209,6 +209,40 @@ export interface CreateOrderInput {
   points_to_use?: number;
 }
 
+export interface OrderPreviewItemOut {
+  product_id?: number;
+  promotion_id?: number;
+  promotion_slot_id?: number;
+  product_name: string;
+  product_slug?: string;
+  quantity: number;
+  base_unit_price: number;
+  modifiers_total: number;
+  unit_price: number;
+  total_price: number;
+  ticket_tag: TicketTag;
+  notes?: string;
+  image_url?: string;
+  selected_modifiers: OrderItemModifierOut[];
+}
+
+export interface OrderPreviewOut {
+  delivery_type: DeliveryType;
+  address_id?: number;
+  coupon_code?: string;
+  points_to_use: number;
+  items: OrderPreviewItemOut[];
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
+  pricing?: {
+    coupon_discount: number;
+    points_discount: number;
+  };
+  total: number;
+  notes?: string;
+}
+
 export interface OrderItemInput {
   product_id?: number;
   promotion_id?: number;

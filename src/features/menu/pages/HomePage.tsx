@@ -1,20 +1,21 @@
-import { useRef, useState } from 'react';
-
-import type { Product } from '@/types';
+import { useMemo, useRef, useState } from 'react';
 
 import { PromotionCard } from '@/shared/components/PromotionCard';
+import { FormInput } from '@/shared/forms';
 import { useMenu, usePromotions } from '@/shared/hooks';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
 
 import { CartFab } from '../../cart/components/CartFab';
 import { ProductCard } from '../components/ProductCard';
-import { ProductModal } from '../components/ProductModal';
+
+type SortMode = 'featured' | 'price-asc' | 'price-desc';
 
 export default function HomePage() {
   const { data: categories, error, isError, isLoading, refetch } = useMenu();
   const { data: promotions } = usePromotions();
-  const [activeCategory, setActiveCategory] = useState<number | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortMode>('featured');
   const categoryRefs = useRef<Record<number, HTMLElement | null>>({});
 
   const scrollToCategory = (id: number) => {
@@ -22,15 +23,44 @@ export default function HomePage() {
     categoryRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const visibleCategories = useMemo(() => {
+    if (!categories) return [];
+
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return categories
+      .filter((category) => activeCategory === 'all' || category.id === activeCategory)
+      .map((category) => {
+        const products = category.products
+          .filter((product) => {
+            if (!normalizedSearch) return true;
+            return product.name.toLowerCase().includes(normalizedSearch);
+          })
+          .sort((a, b) => {
+            if (sort === 'price-asc') return a.price - b.price;
+            if (sort === 'price-desc') return b.price - a.price;
+            return 0;
+          });
+
+        return { ...category, products };
+      })
+      .filter((category) => category.products.length > 0);
+  }, [activeCategory, categories, search, sort]);
+
+  const productCount = useMemo(
+    () => categories?.reduce((total, category) => total + category.products.length, 0) ?? 0,
+    [categories]
+  );
+
   if (isLoading) {
-    return <LoadingState fullScreen label="Cargando menu..." />;
+    return <LoadingState fullScreen label="Cargando catalogo..." />;
   }
 
   if (isError) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
         <ErrorState
-          description={error instanceof Error ? error.message : 'No pudimos cargar el menu.'}
+          description={error instanceof Error ? error.message : 'No pudimos cargar el catalogo.'}
           onAction={() => void refetch()}
         />
       </div>
@@ -57,19 +87,29 @@ export default function HomePage() {
             Yak<span className="text-brand">ero</span>
           </h1>
           <p className="mt-2 max-w-md text-sm text-gray-400">
-            Sushi, sandwiches y comida preparada con una base mobile-first lista para escalar.
+            Explora el catalogo, personaliza tus productos y arma tu pedido.
           </p>
         </div>
       </header>
 
       <nav className="sticky top-0 z-10 overflow-x-auto border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex min-w-max max-w-2xl gap-2 px-4 py-3">
+          <button
+            className={`rounded-full px-4 py-2 text-sm font-medium ${
+              activeCategory === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+            onClick={() => setActiveCategory('all')}
+            type="button"
+          >
+            Todo
+          </button>
           {promotions?.length ? (
             <button
               className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white"
               onClick={() =>
                 document.getElementById('promotions')?.scrollIntoView({ behavior: 'smooth' })
               }
+              type="button"
             >
               Promos
             </button>
@@ -83,6 +123,7 @@ export default function HomePage() {
                   ? 'bg-gray-900 font-medium text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
+              type="button"
             >
               {category.name}
             </button>
@@ -91,6 +132,31 @@ export default function HomePage() {
       </nav>
 
       <main className="mx-auto max-w-2xl space-y-8 px-4 py-5">
+        <section className="space-y-3">
+          <FormInput
+            label="Buscar productos"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Nombre del producto"
+            type="search"
+            value={search}
+          />
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">Ordenar</span>
+            <select
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+              onChange={(event) => setSort(event.target.value as SortMode)}
+              value={sort}
+            >
+              <option value="featured">Orden del menu</option>
+              <option value="price-asc">Menor precio</option>
+              <option value="price-desc">Mayor precio</option>
+            </select>
+          </label>
+          <p className="text-xs text-gray-500">
+            {productCount} productos publicados en {categories.length} categorias.
+          </p>
+        </section>
+
         {promotions?.length ? (
           <section id="promotions">
             <div className="mb-3 flex items-center justify-between">
@@ -105,7 +171,15 @@ export default function HomePage() {
           </section>
         ) : null}
 
-        {categories.map((category) => (
+        {!visibleCategories.length ? (
+          <EmptyState
+            title="No encontramos productos"
+            description="Prueba con otra busqueda o categoria."
+            icon="□"
+          />
+        ) : null}
+
+        {visibleCategories.map((category) => (
           <section
             key={category.id}
             ref={(element) => {
@@ -119,11 +193,7 @@ export default function HomePage() {
 
             <div className="grid gap-3">
               {category.products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  onSelect={() => setSelectedProduct(product)}
-                  product={product}
-                />
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </section>
@@ -131,14 +201,6 @@ export default function HomePage() {
       </main>
 
       <CartFab />
-
-      {selectedProduct ? (
-        <ProductModal
-          key={selectedProduct.id}
-          onClose={() => setSelectedProduct(null)}
-          product={selectedProduct}
-        />
-      ) : null}
     </div>
   );
 }

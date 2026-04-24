@@ -13,7 +13,13 @@ import {
   FormTextarea,
   type CheckoutFormValues,
 } from '@/shared/forms';
-import { useAddresses, useCreateOrder, useDeliveryFee, useValidateCoupon } from '@/shared/hooks';
+import {
+  useAddresses,
+  useCreateOrder,
+  useDeliveryFee,
+  useOrderPreview,
+  useValidateCoupon,
+} from '@/shared/hooks';
 import { useToast } from '@/shared/toast';
 import { BackButton, Button, PageHeader, SectionCard } from '@/shared/ui';
 import { formatCLP } from '@/shared/utils/format';
@@ -67,13 +73,32 @@ export default function CheckoutPage() {
     control,
     name: 'couponInput',
   });
+  const watchedNotes = useWatch({
+    control,
+    name: 'notes',
+  });
 
   const subtotalAmount = subtotal();
-  const deliveryFee = deliveryType === 'delivery' ? (deliveryInfo?.fee ?? 0) : 0;
-  const total = Math.max(subtotalAmount + deliveryFee - couponDiscount - pointsToUse, 0);
+  const orderItems = useMemo(
+    () =>
+      items.map((item) => ({
+        product_id: item.product?.id,
+        promotion_id: item.promotion?.id,
+        promotion_slot_id: item.promotion_slot_id,
+        quantity: item.quantity,
+        notes: item.notes,
+        selected_modifiers: item.selected_modifiers.map((modifier) => ({
+          modifier_option_id: modifier.modifier_option_id,
+        })),
+      })),
+    [items]
+  );
 
   const validationMessage = useMemo(() => {
     if (!items.length) return 'Tu carrito esta vacio.';
+    if (deliveryType === 'delivery' && !isAuthenticated) {
+      return 'Inicia sesion para usar delivery con una direccion guardada.';
+    }
     if (deliveryType === 'delivery' && !selectedAddressId) {
       return 'Selecciona una direccion para despacho.';
     }
@@ -87,7 +112,41 @@ export default function CheckoutPage() {
     }
 
     return '';
-  }, [deliveryInfo, deliveryType, items.length, selectedAddressId]);
+  }, [deliveryInfo, deliveryType, isAuthenticated, items.length, selectedAddressId]);
+
+  const previewPayload = useMemo<CreateOrderInput | null>(() => {
+    if (validationMessage) return null;
+
+    return {
+      delivery_type: deliveryType,
+      address_id: deliveryType === 'delivery' ? (selectedAddressId ?? undefined) : undefined,
+      items: orderItems,
+      notes: watchedNotes?.trim() || undefined,
+      coupon_code: couponCode ?? undefined,
+      points_to_use: pointsToUse,
+    };
+  }, [
+    couponCode,
+    deliveryType,
+    orderItems,
+    pointsToUse,
+    selectedAddressId,
+    validationMessage,
+    watchedNotes,
+  ]);
+
+  const {
+    data: orderPreview,
+    error: previewError,
+    isError: isPreviewError,
+    isFetching: isPreviewFetching,
+  } = useOrderPreview(previewPayload);
+
+  const deliveryFee = orderPreview?.delivery_fee ?? 0;
+  const discount = orderPreview?.discount ?? couponDiscount;
+  const total = orderPreview?.total ?? Math.max(subtotalAmount - couponDiscount - pointsToUse, 0);
+  const submitBlocked =
+    Boolean(validationMessage) || isPreviewError || isPreviewFetching || !orderPreview;
 
   if (!items.length) {
     return <Navigate replace to={APP_ROUTES.home} />;
@@ -125,24 +184,22 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!previewPayload || isPreviewError) {
+      pushToast({
+        tone: 'error',
+        title: 'No pudimos validar el pedido',
+        description: isPreviewError
+          ? getApiErrorMessage(previewError, 'Revisa tu carrito antes de continuar.')
+          : 'Espera la validacion del total antes de pagar.',
+      });
+      return;
+    }
+
     const payload: CreateOrderInput = {
-      delivery_type: deliveryType,
-      address_id: deliveryType === 'delivery' ? (selectedAddressId ?? undefined) : undefined,
+      ...previewPayload,
       guest_email: !isAuthenticated ? values.guestEmail?.trim() : undefined,
       guest_phone: !isAuthenticated ? values.guestPhone?.trim() || undefined : undefined,
-      items: items.map((item) => ({
-        product_id: item.product?.id,
-        promotion_id: item.promotion?.id,
-        promotion_slot_id: item.promotion_slot_id,
-        quantity: item.quantity,
-        notes: item.notes,
-        selected_modifiers: item.selected_modifiers.map((modifier) => ({
-          modifier_option_id: modifier.modifier_option_id,
-        })),
-      })),
       notes: values.notes.trim() || undefined,
-      coupon_code: couponCode ?? undefined,
-      points_to_use: pointsToUse,
     };
 
     try {
@@ -247,6 +304,20 @@ export default function CheckoutPage() {
           </SectionCard>
         ) : null}
 
+        {deliveryType === 'delivery' && !isAuthenticated ? (
+          <SectionCard title="Direccion de entrega">
+            <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+              Para validar cobertura con el backend necesitas iniciar sesion y seleccionar una
+              direccion guardada.
+            </div>
+            <div className="mt-3">
+              <Button fullWidth onClick={() => navigate(APP_ROUTES.login)} variant="secondary">
+                Iniciar sesion
+              </Button>
+            </div>
+          </SectionCard>
+        ) : null}
+
         {!isAuthenticated ? (
           <SectionCard
             description="Necesitamos un contacto para confirmar el pedido."
@@ -345,18 +416,71 @@ export default function CheckoutPage() {
           />
         </SectionCard>
 
-        <SectionCard title="Resumen">
+        <SectionCard title="Resumen del carrito">
+          <div className="mb-4 space-y-3">
+            {(orderPreview?.items ?? items).map((item) => {
+              const isPreviewItem = 'product_name' in item;
+              const itemKey = isPreviewItem
+                ? `${item.product_id ?? item.promotion_id}-${item.quantity}-${item.total_price}`
+                : item.cartItemId;
+              const itemTotal = isPreviewItem ? item.total_price : item.unit_price * item.quantity;
+              const itemModifiers = item.selected_modifiers.map(
+                (modifier) => `${modifier.group_name}: ${modifier.option_name}`
+              );
+              const itemName = isPreviewItem
+                ? item.product_name
+                : (item.product?.name ?? item.promotion?.name ?? 'Item');
+
+              return (
+                <div
+                  key={itemKey}
+                  className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {item.quantity} x {itemName}
+                    </p>
+                    {itemModifiers.length ? (
+                      <p className="mt-1 text-xs text-gray-500">{itemModifiers.join(', ')}</p>
+                    ) : null}
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {formatCLP(itemTotal)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {isPreviewFetching ? (
+            <div className="mb-3 rounded-2xl bg-gray-50 p-3 text-sm text-gray-600">
+              Validando total con el backend...
+            </div>
+          ) : null}
+          {isPreviewError ? (
+            <div className="mb-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">
+              {getApiErrorMessage(previewError, 'No pudimos validar el total del pedido.')}
+            </div>
+          ) : null}
           <div className="space-y-2 text-sm">
-            <SummaryRow label="Subtotal" value={formatCLP(subtotalAmount)} />
+            <SummaryRow
+              label="Subtotal"
+              value={formatCLP(orderPreview?.subtotal ?? subtotalAmount)}
+            />
             <SummaryRow
               label="Envio"
-              value={deliveryFee ? formatCLP(deliveryFee) : 'Se calcula segun despacho'}
+              value={
+                orderPreview
+                  ? formatCLP(deliveryFee)
+                  : deliveryType === 'delivery'
+                    ? 'Validando despacho'
+                    : formatCLP(0)
+              }
             />
-            {couponDiscount > 0 ? (
+            {discount > 0 ? (
               <SummaryRow
                 emphasis
                 label={`Cupon ${couponCode}`}
-                value={`-${formatCLP(couponDiscount)}`}
+                value={`-${formatCLP(discount)}`}
               />
             ) : null}
             {pointsToUse > 0 ? (
@@ -369,7 +493,7 @@ export default function CheckoutPage() {
           </div>
         </SectionCard>
 
-        <Button disabled={isPending || Boolean(validationMessage)} fullWidth type="submit">
+        <Button disabled={isPending || submitBlocked} fullWidth type="submit">
           {isPending ? 'Procesando...' : `Pagar ${formatCLP(total)}`}
         </Button>
       </form>
