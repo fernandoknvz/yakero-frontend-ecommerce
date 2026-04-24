@@ -29,7 +29,7 @@ cd yakero-frontend
 npm install
 
 cp .env.example .env
-# Asegúrate de que VITE_API_URL apunte al backend
+# Asegúrate de que VITE_API_BASE_URL apunte al backend
 
 npm run dev
 # → http://localhost:5173
