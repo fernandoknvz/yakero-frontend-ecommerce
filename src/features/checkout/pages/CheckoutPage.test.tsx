@@ -85,11 +85,10 @@ const product: Product = {
 describe('CheckoutPage', () => {
   beforeEach(() => {
     mockCreateOrder.mockReset();
-    mockCreateOrder.mockResolvedValue({ id: 123 });
     mockCreatePaymentPreference.mockReset();
     mockCreatePaymentPreference.mockResolvedValue({
+      external_reference: 'checkout-session-123',
       init_point: 'https://www.mercadopago.cl/checkout',
-      order_id: 123,
       preference_id: 'pref-123',
       sandbox_init_point: 'https://sandbox.mercadopago.cl/checkout',
     });
@@ -149,7 +148,7 @@ describe('CheckoutPage', () => {
     expect(screen.getByRole('button', { name: /pagar/i })).toBeDisabled();
   });
 
-  it('creates a payment preference after creating the order and redirects to sandbox', async () => {
+  it('creates a payment preference without creating an order and redirects to sandbox', async () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -161,8 +160,19 @@ describe('CheckoutPage', () => {
     await userEvent.type(screen.getByLabelText('Email para confirmacion'), 'buyer@example.com');
     await userEvent.click(screen.getByRole('button', { name: /pagar/i }));
 
-    expect(mockCreateOrder).toHaveBeenCalled();
-    expect(mockCreatePaymentPreference).toHaveBeenCalledWith({ order_id: 123 });
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreatePaymentPreference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        delivery_type: 'retiro',
+        guest_email: 'buyer@example.com',
+        items: [
+          expect.objectContaining({
+            product_id: 1,
+            quantity: 1,
+          }),
+        ],
+      })
+    );
     expect(assign).toHaveBeenCalledWith('https://sandbox.mercadopago.cl/checkout');
   });
 });

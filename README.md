@@ -71,8 +71,8 @@ src/
 | ------------------- | -------------------- | ----------------------------------------------- |
 | `/`                 | `HomePage`           | Menú completo con navegación por categorías     |
 | `/checkout`         | `CheckoutPage`       | Delivery/retiro, dirección, cupón, puntos, pago |
-| `/checkout/success` | `PaymentSuccessPage` | Confirmación de pago aprobado                   |
-| `/checkout/failure` | `PaymentFailurePage` | Pago rechazado con opción de reintento          |
+| `/checkout/success` | `PaymentSuccessPage` | Confirmación visual y espera de webhook         |
+| `/checkout/failure` | `PaymentFailurePage` | Pago rechazado sin crear pedido                 |
 | `/checkout/pending` | `PaymentPendingPage` | Pago en proceso                                 |
 | `/orders/:id`       | `OrderTrackingPage`  | Seguimiento en tiempo real (polling 15s)        |
 | `/account/orders`   | `OrderHistoryPage`   | Historial con pedidos activos destacados        |
@@ -88,16 +88,17 @@ src/
 HomePage → ProductModal (elegir modificadores)
          → CartFab / CartDrawer (ver carrito)
          → CheckoutPage (delivery/retiro + cupón + puntos)
-         → POST /api/v1/orders → preferencia MP creada
+         → POST /api/v1/payments/create-preference
          → redirect a MercadoPago
-         → /checkout/success → /orders/:id (seguimiento)
+         → webhook approved crea el pedido real
+         → /checkout/success → /account/orders
 ```
 
 ---
 
 ## Estado del carrito
 
-El carrito usa **Zustand con `persist`**, guardado en `localStorage` bajo la clave `yakero_cart`. Sobrevive recargas de página. Se limpia después de crear el pedido exitosamente.
+El carrito usa **Zustand con `persist`**, guardado en `localStorage` bajo la clave `yakero_cart`. Sobrevive recargas de página.
 
 ---
 

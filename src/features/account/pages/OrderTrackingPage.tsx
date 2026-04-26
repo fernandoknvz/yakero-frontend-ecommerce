@@ -4,7 +4,7 @@ import type { OrderStatus } from '@/types';
 
 import { useOrder } from '@/shared/hooks';
 import { BackButton, Button, EmptyState, LoadingState, PageHeader, SectionCard } from '@/shared/ui';
-import { formatCLP } from '@/shared/utils/format';
+import { formatCLP, formatDateTimeChile } from '@/shared/utils/format';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; tone: string; step: number }> = {
   pendiente: { label: 'Pedido recibido', tone: 'text-gray-700', step: 0 },
@@ -57,13 +57,7 @@ export default function OrderTrackingPage() {
           <div className="text-center">
             <h2 className={`text-xl font-bold ${config.tone}`}>{config.label}</h2>
             <p className="mt-2 text-sm text-gray-500">
-              Creado el{' '}
-              {new Date(order.created_at).toLocaleDateString('es-CL', {
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                month: 'long',
-              })}
+              Creado el {formatDateTimeChile(order.created_at)}
             </p>
             {['pendiente', 'pagado', 'en_preparacion', 'listo', 'despachado'].includes(
               order.status

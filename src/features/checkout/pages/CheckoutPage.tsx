@@ -14,7 +14,6 @@ import {
 } from '@/shared/forms';
 import {
   useAddresses,
-  useCreateOrder,
   useCreatePaymentPreference,
   useDeliveryFee,
   useOrderPreview,
@@ -66,7 +65,6 @@ export default function CheckoutPage() {
     deliveryType === 'delivery' ? selectedAddress?.latitude : undefined,
     deliveryType === 'delivery' ? selectedAddress?.longitude : undefined
   );
-  const { mutateAsync: createOrder, isPending } = useCreateOrder();
   const { mutateAsync: createPaymentPreference, isPending: isCreatingPreference } =
     useCreatePaymentPreference();
   const { mutateAsync: validateCoupon, isPending: validatingCoupon } = useValidateCoupon();
@@ -148,7 +146,7 @@ export default function CheckoutPage() {
   const total = orderPreview?.total ?? Math.max(subtotalAmount - couponDiscount - pointsToUse, 0);
   const submitBlocked =
     Boolean(validationMessage) || isPreviewError || isPreviewFetching || !orderPreview;
-  const isSubmittingPayment = isPending || isCreatingPreference;
+  const isSubmittingPayment = isCreatingPreference;
 
   if (!items.length) {
     return <Navigate replace to={APP_ROUTES.home} />;
@@ -205,20 +203,25 @@ export default function CheckoutPage() {
     };
 
     try {
-      const order = await createOrder(payload);
-      pushToast({
-        tone: 'success',
-        title: 'Pedido creado',
-        description: 'Redirigiendo a Mercado Pago...',
-      });
-
-      const preference = await createPaymentPreference({ order_id: order.id });
+      const preference = await createPaymentPreference(payload);
       const paymentUrl = preference.sandbox_init_point || preference.init_point;
 
       if (!paymentUrl) {
         throw new Error('No recibimos una URL de pago valida.');
       }
 
+      if (preference.external_reference) {
+        window.sessionStorage.setItem(
+          'yakero:last_checkout_reference',
+          preference.external_reference
+        );
+      }
+
+      pushToast({
+        tone: 'success',
+        title: 'Pago iniciado',
+        description: 'Redirigiendo a Mercado Pago...',
+      });
       window.location.assign(paymentUrl);
     } catch (error) {
       pushToast({
@@ -226,7 +229,7 @@ export default function CheckoutPage() {
         title: 'No pudimos iniciar el pago',
         description: getApiErrorMessage(
           error,
-          'Tu pedido fue creado, pero no pudimos abrir Mercado Pago.'
+          'No pudimos abrir Mercado Pago. Intenta nuevamente.'
         ),
       });
     }

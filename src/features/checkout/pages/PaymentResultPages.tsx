@@ -1,26 +1,11 @@
-import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { getApiErrorMessage } from '@/shared/api/errors';
 import { APP_ROUTES } from '@/shared/constants/routes';
-import { useCreatePaymentPreference, useOrder } from '@/shared/hooks';
-import { useToast } from '@/shared/toast';
-import { Button, ErrorState, LoadingState } from '@/shared/ui';
-import { formatCLP } from '@/shared/utils/format';
-import type { OrderOut, PaymentStatus } from '@/types';
+import { Button } from '@/shared/ui';
+import type { PaymentStatus } from '@/types';
 
 type ResultTone = 'success' | 'failure' | 'pending';
-
-function getOrderIdFromParams(params: URLSearchParams) {
-  const rawOrderId = params.get('order_id') ?? params.get('external_reference');
-  const orderId = Number(rawOrderId);
-  return Number.isFinite(orderId) && orderId > 0 ? orderId : null;
-}
-
-function isPaidStatus(status?: PaymentStatus | string) {
-  return status === 'pagado' || status === 'paid';
-}
 
 function paymentStatusLabel(status?: PaymentStatus | string) {
   const labels: Record<string, string> = {
@@ -37,15 +22,17 @@ function paymentStatusLabel(status?: PaymentStatus | string) {
 }
 
 function ResultLayout({
-  action,
-  children,
   description,
+  onGoHome,
+  onViewOrders,
+  reference,
   title,
   tone,
 }: {
-  action?: ReactNode;
-  children?: ReactNode;
   description: string;
+  onGoHome: () => void;
+  onViewOrders: () => void;
+  reference?: string | null;
   title: string;
   tone: ResultTone;
 }) {
@@ -67,60 +54,24 @@ function ResultLayout({
         </div>
         <h1 className="text-2xl font-black text-gray-900">{title}</h1>
         <p className="mt-3 text-sm text-gray-500">{description}</p>
-        {children ? <div className="mt-5">{children}</div> : null}
-        {action ? <div className="mt-6">{action}</div> : null}
+        {reference ? (
+          <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-left text-sm">
+            <div className="flex items-center justify-between gap-3 py-1 text-gray-600">
+              <span>Referencia</span>
+              <span className="break-all text-right font-semibold text-gray-900">{reference}</span>
+            </div>
+          </div>
+        ) : null}
+        <div className="mt-6 flex flex-col gap-3">
+          <Button fullWidth onClick={onViewOrders}>
+            Ver mis pedidos
+          </Button>
+          <Button fullWidth onClick={onGoHome} variant="ghost">
+            Volver al menu
+          </Button>
+        </div>
       </div>
     </div>
-  );
-}
-
-function OrderSummary({ order }: { order: OrderOut }) {
-  return (
-    <div className="rounded-2xl bg-gray-50 p-4 text-left text-sm">
-      <SummaryRow label="Orden" value={`#${order.id}`} />
-      <SummaryRow label="Pago" value={paymentStatusLabel(order.payment_status)} />
-      <SummaryRow label="Estado" value={String(order.status).replace(/_/g, ' ')} />
-      <SummaryRow label="Total" value={formatCLP(order.total)} />
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-1 text-gray-600">
-      <span>{label}</span>
-      <span className="font-semibold capitalize text-gray-900">{value}</span>
-    </div>
-  );
-}
-
-function RetryPaymentButton({ orderId }: { orderId: number }) {
-  const { pushToast } = useToast();
-  const { mutateAsync: createPreference, isPending } = useCreatePaymentPreference();
-
-  const handleRetry = async () => {
-    try {
-      const preference = await createPreference({ order_id: orderId });
-      const paymentUrl = preference.sandbox_init_point || preference.init_point;
-
-      if (!paymentUrl) {
-        throw new Error('No recibimos una URL de pago valida.');
-      }
-
-      window.location.assign(paymentUrl);
-    } catch (error) {
-      pushToast({
-        tone: 'error',
-        title: 'No pudimos reintentar el pago',
-        description: getApiErrorMessage(error, 'Intenta nuevamente en unos minutos.'),
-      });
-    }
-  };
-
-  return (
-    <Button disabled={isPending} fullWidth onClick={() => void handleRetry()}>
-      {isPending ? 'Abriendo Mercado Pago...' : 'Reintentar pago'}
-    </Button>
   );
 }
 
@@ -133,21 +84,16 @@ function PaymentResultPage({
 }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const orderId = getOrderIdFromParams(params);
-  const {
-    data: order,
-    error,
-    isError,
-    isLoading,
-  } = useOrder(orderId ?? 0, kind === 'success' ? 4_000 : 15_000);
+  const reference =
+    params.get('external_reference') ??
+    window.sessionStorage.getItem('yakero:last_checkout_reference');
 
   const copy = useMemo(() => {
     if (kind === 'success') {
       return {
-        title: isPaidStatus(order?.payment_status) ? 'Pago exitoso' : 'Estamos confirmando tu pago',
-        description: isPaidStatus(order?.payment_status)
-          ? 'Tu pago fue confirmado y el pedido ya esta en seguimiento.'
-          : 'Mercado Pago nos redirigio correctamente. Estamos esperando la confirmacion final del backend.',
+        title: 'Estamos confirmando tu pago',
+        description:
+          'Mercado Pago nos redirigio correctamente. Cuando el webhook apruebe el pago, el pedido aparecera en Mis pedidos.',
       };
     }
 
@@ -155,75 +101,26 @@ function PaymentResultPage({
       return {
         title: 'Pago no completado',
         description:
-          'No pudimos confirmar el pago. Puedes reintentar con Mercado Pago si la orden sigue abierta.',
+          'Mercado Pago no completo el cobro. No se creo ningun pedido; puedes volver al menu e iniciar una compra nueva.',
       };
     }
 
     return {
       title: 'Pago pendiente',
-      description: 'Tu pago esta pendiente de confirmacion. Puedes revisar el estado del pedido.',
+      description:
+        'Tu pago esta pendiente de confirmacion. El pedido aparecera en Mis pedidos solo cuando el backend reciba la aprobacion.',
     };
-  }, [kind, order?.payment_status]);
-
-  if (!orderId) {
-    return (
-      <ResultLayout
-        tone={kind}
-        title={copy.title}
-        description={missingOrderDescription}
-        action={
-          <Button fullWidth onClick={() => navigate(APP_ROUTES.home)} variant="secondary">
-            Volver al menu
-          </Button>
-        }
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <ResultLayout
-        tone={kind}
-        title={copy.title}
-        description="Consultando el estado actualizado de tu pedido."
-        action={<LoadingState label="Cargando orden..." />}
-      />
-    );
-  }
-
-  if (isError || !order) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-10">
-        <ErrorState
-          description={getApiErrorMessage(error, 'No pudimos cargar el estado del pedido.')}
-          onAction={() => navigate(`/orders/${orderId}`)}
-          actionLabel="Ver seguimiento"
-        />
-      </div>
-    );
-  }
-
-  const canRetryPayment = !isPaidStatus(order.payment_status);
+  }, [kind]);
 
   return (
     <ResultLayout
       tone={kind}
       title={copy.title}
-      description={copy.description}
-      action={
-        <div className="flex flex-col gap-3">
-          {canRetryPayment ? <RetryPaymentButton orderId={order.id} /> : null}
-          <Button fullWidth onClick={() => navigate(`/orders/${order.id}`)} variant="secondary">
-            Ver estado del pedido
-          </Button>
-          <Button fullWidth onClick={() => navigate(APP_ROUTES.home)} variant="ghost">
-            Volver al menu
-          </Button>
-        </div>
-      }
-    >
-      <OrderSummary order={order} />
-    </ResultLayout>
+      description={reference ? copy.description : missingOrderDescription}
+      onGoHome={() => navigate(APP_ROUTES.home)}
+      onViewOrders={() => navigate(APP_ROUTES.accountOrders)}
+      reference={reference}
+    />
   );
 }
 

@@ -14,13 +14,24 @@ export function formatCLP(amount: number): string {
  * Formatea una fecha ISO a formato legible en español.
  */
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-CL', {
+  return new Intl.DateTimeFormat('es-CL', {
     day: 'numeric',
-    month: 'long',
-    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+    month: 'long',
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
+export function formatDateTimeChile(iso: string): string {
+  return new Intl.DateTimeFormat('es-CL', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'long',
+    timeZone: 'America/Santiago',
+  }).format(new Date(iso));
 }
 
 /**

@@ -243,15 +243,13 @@ export interface OrderPreviewOut {
   notes?: string;
 }
 
-export interface CreatePaymentPreferenceInput {
-  order_id: number;
-}
+export type CreatePaymentPreferenceInput = CreateOrderInput;
 
 export interface PaymentPreferenceOut {
   preference_id: string;
   init_point: string;
   sandbox_init_point?: string;
-  order_id: number;
+  external_reference: string;
 }
 
 export interface OrderItemInput {
