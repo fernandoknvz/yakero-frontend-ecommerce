@@ -22,14 +22,15 @@ function resolveApiBaseUrl() {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+const configuredCheckoutUrl = import.meta.env.VITE_MP_CHECKOUT_URL?.trim();
 
 if (import.meta.env.DEV || import.meta.env.PROD) {
   console.info('API base URL:', API_BASE_URL);
 }
 
 export const env = {
+  appEnv: import.meta.env.VITE_APP_ENV?.trim() || import.meta.env.MODE,
   apiUrl: API_BASE_URL,
-  mercadoPagoCheckoutUrl: trimTrailingSlash(
-    import.meta.env.VITE_MP_CHECKOUT_URL ?? fallbackCheckoutUrl
-  ),
+  mercadoPagoCheckoutUrl: trimTrailingSlash(configuredCheckoutUrl || fallbackCheckoutUrl),
+  mercadoPagoPublicKey: import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY?.trim() || undefined,
 };

@@ -1,4 +1,4 @@
-// ─── Enums ───────────────────────────────────────────────────────────────────
+// --- Enums ---
 
 export type OrderStatus =
   | 'pendiente'
@@ -11,12 +11,28 @@ export type OrderStatus =
   | 'anulado';
 
 export type PaymentStatus = 'pendiente' | 'pagado' | 'rechazado' | 'reembolso';
+export type PublicPaymentStatus = 'pending' | 'approved' | 'rejected' | 'amount_mismatch';
+export type PublicCheckoutSessionStatus =
+  | 'pending'
+  | 'paid'
+  | 'failed'
+  | 'expired'
+  | 'amount_mismatch';
+export type PublicOrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'dispatched'
+  | 'delivered'
+  | 'cancelled'
+  | 'voided';
 export type DeliveryType = 'delivery' | 'retiro';
 export type TicketTag = 'cocina_sushi' | 'cocina_sandwich' | 'caja' | 'ninguna';
 export type ModifierType = 'single' | 'multiple';
 export type UserRole = 'customer' | 'admin' | 'pos_service';
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
+// --- Auth ---
 
 export interface TokenResponse {
   access_token: string;
@@ -38,7 +54,7 @@ export interface LoginInput {
   password: string;
 }
 
-// ─── User ────────────────────────────────────────────────────────────────────
+// --- User ---
 
 export interface User {
   id: number;
@@ -51,7 +67,7 @@ export interface User {
   created_at: string;
 }
 
-// ─── Address ─────────────────────────────────────────────────────────────────
+// --- Address ---
 
 export interface Address {
   id: number;
@@ -78,7 +94,7 @@ export interface AddressInput {
   is_default?: boolean;
 }
 
-// ─── Products ────────────────────────────────────────────────────────────────
+// --- Products ---
 
 export interface ModifierOption {
   id: number;
@@ -121,7 +137,7 @@ export interface Category {
   products: Product[];
 }
 
-// ─── Promotions ──────────────────────────────────────────────────────────────
+// --- Promotions ---
 
 export interface PromotionSlot {
   id: number;
@@ -141,7 +157,7 @@ export interface Promotion {
   slots: PromotionSlot[];
 }
 
-// ─── Cart (client-side only) ─────────────────────────────────────────────────
+// --- Cart (client-side only) ---
 
 export interface SelectedModifier {
   modifier_option_id: number;
@@ -161,7 +177,7 @@ export interface CartItem {
   notes?: string;
 }
 
-// ─── Orders ──────────────────────────────────────────────────────────────────
+// --- Orders ---
 
 export interface OrderItemModifierOut {
   option_name: string;
@@ -252,6 +268,18 @@ export interface PaymentPreferenceOut {
   external_reference: string;
 }
 
+export interface PaymentStatusResponse {
+  external_reference: string;
+  checkout_session_status: PublicCheckoutSessionStatus;
+  payment_status: PublicPaymentStatus | null;
+  order_id: number | null;
+  order_status: PublicOrderStatus | null;
+  total: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  message: string;
+}
+
 export interface OrderItemInput {
   product_id?: number;
   promotion_id?: number;
@@ -261,7 +289,7 @@ export interface OrderItemInput {
   selected_modifiers: { modifier_option_id: number }[];
 }
 
-// ─── Delivery ────────────────────────────────────────────────────────────────
+// --- Delivery ---
 
 export interface DeliveryFeeOut {
   distance_km: number;
@@ -269,7 +297,7 @@ export interface DeliveryFeeOut {
   is_available: boolean;
 }
 
-// ─── Coupons ─────────────────────────────────────────────────────────────────
+// --- Coupons ---
 
 export interface CouponOut {
   code: string;
@@ -278,9 +306,10 @@ export interface CouponOut {
   calculated_discount: number;
 }
 
-// ─── API errors ──────────────────────────────────────────────────────────────
+// --- API errors ---
 
 export interface ApiError {
   code: string;
-  message: string;
+  message?: string;
+  detail?: string;
 }

@@ -3,35 +3,30 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { APP_ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/shared/ui';
-import type { PaymentStatus } from '@/types';
 
 type ResultTone = 'success' | 'failure' | 'pending';
 
-function paymentStatusLabel(status?: PaymentStatus | string) {
-  const labels: Record<string, string> = {
-    pendiente: 'Pendiente',
-    pagado: 'Pagado',
-    rechazado: 'Rechazado',
-    reembolso: 'Reembolsado',
-    pending: 'Pendiente',
-    paid: 'Pagado',
-    rejected: 'Rechazado',
-  };
-
-  return status ? (labels[status] ?? status) : 'Sin informacion';
+function resolveExternalReference(params: URLSearchParams) {
+  return (
+    params.get('external_reference') ??
+    params.get('collection_external_reference') ??
+    window.sessionStorage.getItem('yakero:last_checkout_reference')
+  );
 }
 
 function ResultLayout({
   description,
   onGoHome,
-  onViewOrders,
+  onRetryPayment,
+  onTrackPayment,
   reference,
   title,
   tone,
 }: {
   description: string;
   onGoHome: () => void;
-  onViewOrders: () => void;
+  onRetryPayment?: () => void;
+  onTrackPayment?: () => void;
   reference?: string | null;
   title: string;
   tone: ResultTone;
@@ -41,19 +36,22 @@ function ResultLayout({
     failure: 'bg-red-50 text-red-700',
     pending: 'bg-yellow-50 text-yellow-700',
   };
+  const labels: Record<ResultTone, string> = {
+    success: 'Confirmando',
+    failure: 'No completado',
+    pending: 'Pendiente',
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm">
         <div
-          className={`mx-auto mb-4 rounded-full px-4 py-2 text-sm font-semibold ${toneClasses[tone]}`}
+          className={`mx-auto mb-4 inline-flex rounded-full px-4 py-2 text-sm font-semibold ${toneClasses[tone]}`}
         >
-          {paymentStatusLabel(
-            tone === 'success' ? 'pagado' : tone === 'failure' ? 'rechazado' : 'pendiente'
-          )}
+          {labels[tone]}
         </div>
         <h1 className="text-2xl font-black text-gray-900">{title}</h1>
-        <p className="mt-3 text-sm text-gray-500">{description}</p>
+        <p className="mt-3 text-sm leading-6 text-gray-500">{description}</p>
         {reference ? (
           <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-left text-sm">
             <div className="flex items-center justify-between gap-3 py-1 text-gray-600">
@@ -63,11 +61,18 @@ function ResultLayout({
           </div>
         ) : null}
         <div className="mt-6 flex flex-col gap-3">
-          <Button fullWidth onClick={onViewOrders}>
-            Ver mis pedidos
-          </Button>
+          {onTrackPayment ? (
+            <Button fullWidth onClick={onTrackPayment}>
+              Ver estado de mi compra
+            </Button>
+          ) : null}
+          {onRetryPayment ? (
+            <Button fullWidth onClick={onRetryPayment} variant="secondary">
+              Reintentar pago
+            </Button>
+          ) : null}
           <Button fullWidth onClick={onGoHome} variant="ghost">
-            Volver al menu
+            Volver al inicio
           </Button>
         </div>
       </div>
@@ -77,23 +82,21 @@ function ResultLayout({
 
 function PaymentResultPage({
   kind,
-  missingOrderDescription,
+  missingReferenceDescription,
 }: {
   kind: ResultTone;
-  missingOrderDescription: string;
+  missingReferenceDescription: string;
 }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const reference =
-    params.get('external_reference') ??
-    window.sessionStorage.getItem('yakero:last_checkout_reference');
+  const reference = resolveExternalReference(params);
 
   const copy = useMemo(() => {
     if (kind === 'success') {
       return {
         title: 'Estamos confirmando tu pago',
         description:
-          'Mercado Pago nos redirigio correctamente. Cuando el webhook apruebe el pago, el pedido aparecera en Mis pedidos.',
+          'Mercado Pago nos redirigio correctamente. Consulta el seguimiento para saber cuando el pedido quede creado.',
       };
     }
 
@@ -101,14 +104,13 @@ function PaymentResultPage({
       return {
         title: 'Pago no completado',
         description:
-          'Mercado Pago no completo el cobro. No se creo ningun pedido; puedes volver al menu e iniciar una compra nueva.',
+          'Mercado Pago no completo el cobro. No limpiaremos tu carrito para que puedas revisar e intentar nuevamente.',
       };
     }
 
     return {
       title: 'Pago pendiente',
-      description:
-        'Tu pago esta pendiente de confirmacion. El pedido aparecera en Mis pedidos solo cuando el backend reciba la aprobacion.',
+      description: 'Tu pago esta pendiente de confirmacion. Puedes seguir esta compra sin login.',
     };
   }, [kind]);
 
@@ -116,9 +118,10 @@ function PaymentResultPage({
     <ResultLayout
       tone={kind}
       title={copy.title}
-      description={reference ? copy.description : missingOrderDescription}
+      description={reference ? copy.description : missingReferenceDescription}
       onGoHome={() => navigate(APP_ROUTES.home)}
-      onViewOrders={() => navigate(APP_ROUTES.accountOrders)}
+      onRetryPayment={kind === 'failure' ? () => navigate(APP_ROUTES.checkout) : undefined}
+      onTrackPayment={reference ? () => navigate(APP_ROUTES.paymentStatus(reference)) : undefined}
       reference={reference}
     />
   );
@@ -128,7 +131,7 @@ export function PaymentSuccessPage() {
   return (
     <PaymentResultPage
       kind="success"
-      missingOrderDescription="Mercado Pago retorno sin identificador de orden. Revisa tus pedidos para confirmar el estado."
+      missingReferenceDescription="Mercado Pago retorno sin referencia publica. Si necesitas ayuda, contacta a Yakero con el comprobante de pago."
     />
   );
 }
@@ -137,7 +140,7 @@ export function PaymentFailurePage() {
   return (
     <PaymentResultPage
       kind="failure"
-      missingOrderDescription="Mercado Pago retorno sin identificador de orden. Puedes volver al checkout si tu carrito sigue disponible."
+      missingReferenceDescription="Mercado Pago retorno sin referencia publica. Puedes volver al checkout si tu carrito sigue disponible."
     />
   );
 }
@@ -146,7 +149,7 @@ export function PaymentPendingPage() {
   return (
     <PaymentResultPage
       kind="pending"
-      missingOrderDescription="Mercado Pago retorno sin identificador de orden. Revisa tus pedidos para confirmar el estado."
+      missingReferenceDescription="Mercado Pago retorno sin referencia publica. Si el cargo aparece en tu medio de pago, contacta a Yakero."
     />
   );
 }

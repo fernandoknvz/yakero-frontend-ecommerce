@@ -10,22 +10,35 @@ describe('PaymentResultPages', () => {
     window.sessionStorage.clear();
   });
 
-  it('success page reads external_reference and explains webhook confirmation', () => {
+  it('success page reads external_reference and offers public tracking', () => {
     renderWithProviders(<PaymentSuccessPage />, {
       route: '/checkout/success?external_reference=checkout-session-321',
     });
 
     expect(screen.getByText('Estamos confirmando tu pago')).toBeInTheDocument();
     expect(screen.getByText('checkout-session-321')).toBeInTheDocument();
-    expect(screen.getByText(/pedido aparecera en Mis pedidos/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver estado de mi compra' })).toBeInTheDocument();
+    expect(screen.queryByText(/Mis pedidos/i)).not.toBeInTheDocument();
   });
 
-  it('failure page does not offer retrying an old order payment', () => {
+  it('failure page keeps retry available without assuming an order exists', () => {
     renderWithProviders(<PaymentFailurePage />, {
       route: '/checkout/failure?external_reference=checkout-session-321',
     });
 
     expect(screen.getByText('Pago no completado')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reintentar pago' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reintentar pago' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver estado de mi compra' })).toBeInTheDocument();
+  });
+
+  it('shows a controlled message when Mercado Pago returns without reference', () => {
+    renderWithProviders(<PaymentSuccessPage />, {
+      route: '/checkout/success',
+    });
+
+    expect(screen.getByText(/retorno sin referencia publica/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Ver estado de mi compra' })
+    ).not.toBeInTheDocument();
   });
 });

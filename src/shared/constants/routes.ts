@@ -5,6 +5,8 @@ export const APP_ROUTES = {
   checkoutSuccess: '/checkout/success',
   checkoutFailure: '/checkout/failure',
   checkoutPending: '/checkout/pending',
+  paymentStatusBase: '/payment/status',
+  paymentStatus: (externalReference: string) => `/payment/status/${externalReference}`,
   login: '/login',
   register: '/register',
   account: '/account',

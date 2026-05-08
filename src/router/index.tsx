@@ -14,6 +14,7 @@ import AppLayout from './AppLayout';
 const HomePage = lazy(() => import('../features/menu/pages/HomePage'));
 const ProductDetailPage = lazy(() => import('../features/menu/pages/ProductDetailPage'));
 const CheckoutPage = lazy(() => import('../features/checkout/pages/CheckoutPage'));
+const PaymentStatusPage = lazy(() => import('../features/checkout/pages/PaymentStatusPage'));
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'));
 const OrderTrackingPage = lazy(() => import('../features/account/pages/OrderTrackingPage'));
@@ -38,6 +39,8 @@ export const router = createBrowserRouter([
       { path: 'checkout/success', element: <PaymentSuccessPage /> },
       { path: 'checkout/failure', element: <PaymentFailurePage /> },
       { path: 'checkout/pending', element: <PaymentPendingPage /> },
+      { path: 'payment/status', element: wrap(PaymentStatusPage) },
+      { path: 'payment/status/:externalReference', element: wrap(PaymentStatusPage) },
       {
         element: <PublicOnlyRoute />,
         children: [

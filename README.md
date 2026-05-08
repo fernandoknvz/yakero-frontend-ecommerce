@@ -114,3 +114,11 @@ El carrito usa **Zustand con `persist`**, guardado en `localStorage` bajo la cla
 npm run build
 # Genera dist/ optimizado con code splitting automático
 ```
+
+---
+
+## Docker / VPS
+
+El despliegue productivo usa build multi-stage con Node LTS y nginx alpine.
+
+Documentacion: [docs/deploy-docker.md](docs/deploy-docker.md)

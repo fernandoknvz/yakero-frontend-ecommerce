@@ -6,7 +6,9 @@ const FALLBACK_ERROR_MESSAGE = 'No pudimos completar la solicitud. Intenta nueva
 
 export function getApiErrorMessage(error: unknown, fallback = FALLBACK_ERROR_MESSAGE) {
   if (error instanceof AxiosError) {
-    return error.response?.data?.message ?? error.message ?? fallback;
+    return (
+      error.response?.data?.message ?? error.response?.data?.detail ?? error.message ?? fallback
+    );
   }
 
   if (error instanceof Error) {

@@ -7,6 +7,7 @@ export const queryKeys = {
   order: (id: number) => ['orders', id] as const,
   orderPreview: (payload: unknown) => ['orders', 'preview', payload] as const,
   paymentPreference: ['payments', 'preference'] as const,
+  paymentStatus: (externalReference: string) => ['payments', 'status', externalReference] as const,
   addresses: ['addresses'] as const,
   me: ['me'] as const,
   deliveryFee: (lat: number, lon: number) => ['delivery', lat, lon] as const,

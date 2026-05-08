@@ -1,0 +1,15 @@
+services:
+  yakero-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_APP_ENV: ${VITE_APP_ENV:-production}
+        VITE_MP_CHECKOUT_URL: ${VITE_MP_CHECKOUT_URL:-}
+        VITE_MERCADOPAGO_PUBLIC_KEY: ${VITE_MERCADOPAGO_PUBLIC_KEY:-}
+    image: yakero-frontend:${YAKERO_FRONTEND_TAG:-latest}
+    container_name: yakero-frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-8080}:80'

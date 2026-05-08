@@ -14,6 +14,7 @@ const hiddenNavRoutes = [
   APP_ROUTES.checkoutSuccess,
   APP_ROUTES.checkoutFailure,
   APP_ROUTES.checkoutPending,
+  APP_ROUTES.paymentStatusBase,
 ];
 
 export default function AppLayout() {
