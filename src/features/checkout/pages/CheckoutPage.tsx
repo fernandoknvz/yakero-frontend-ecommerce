@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import { env } from '@/config/env';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { getApiErrorMessage } from '@/shared/api/errors';
 import { APP_ROUTES } from '@/shared/constants/routes';
@@ -23,7 +24,7 @@ import { useToast } from '@/shared/toast';
 import { BackButton, Button, PageHeader, SectionCard } from '@/shared/ui';
 import { formatCLP } from '@/shared/utils/format';
 import { useAuthStore } from '@/stores/authStore';
-import type { CreateOrderInput, DeliveryType } from '@/types';
+import type { CreateOrderInput, DeliveryType, PaymentPreferenceOut } from '@/types';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -204,7 +205,7 @@ export default function CheckoutPage() {
 
     try {
       const preference = await createPaymentPreference(payload);
-      const paymentUrl = preference.sandbox_init_point || preference.init_point;
+      const paymentUrl = selectMercadoPagoCheckoutUrl(preference);
 
       if (!paymentUrl) {
         throw new Error('No recibimos una URL de pago valida.');
@@ -507,6 +508,20 @@ export default function CheckoutPage() {
         </Button>
       </form>
     </div>
+  );
+}
+
+function selectMercadoPagoCheckoutUrl(preference: PaymentPreferenceOut) {
+  if (shouldUseMercadoPagoSandbox() && preference.sandbox_init_point) {
+    return preference.sandbox_init_point;
+  }
+
+  return preference.init_point || preference.sandbox_init_point;
+}
+
+function shouldUseMercadoPagoSandbox() {
+  return ['sandbox', 'test', 'testing', 'development', 'dev', 'local'].includes(
+    env.appEnv.toLowerCase()
   );
 }
 
