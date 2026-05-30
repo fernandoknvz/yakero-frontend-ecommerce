@@ -113,15 +113,30 @@ export interface ModifierGroup {
   options: ModifierOption[];
 }
 
+export type ProductCatalogField =
+  | string
+  | { name?: string; title?: string; label?: string; value?: string }
+  | null
+  | undefined;
+
 export interface Product {
   id: number;
   category_id: number;
   sku?: string;
+  product_name?: string;
   name: string;
   slug: string;
   description?: string;
   price: number;
   image_url?: string;
+  category?: ProductCatalogField;
+  category_name?: ProductCatalogField;
+  subcategory?: ProductCatalogField;
+  sub_category?: ProductCatalogField;
+  subcategoria?: ProductCatalogField;
+  subCategory?: ProductCatalogField;
+  subcategory_name?: ProductCatalogField;
+  sub_category_name?: ProductCatalogField;
   ticket_tag: TicketTag;
   is_available: boolean;
   modifier_groups: ModifierGroup[];

@@ -1,4 +1,4 @@
-import type { Category, Product, Promotion } from '@/types';
+import type { Category, Product, ProductCatalogField, Promotion } from '@/types';
 
 import { apiClient } from '../client';
 
@@ -20,9 +20,34 @@ function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
+function hasCatalogFieldValue(value: ProductCatalogField) {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (value && typeof value === 'object') {
+    return Boolean(value.name ?? value.title ?? value.label ?? value.value);
+  }
+
+  return false;
+}
+
+function firstCatalogField(...values: ProductCatalogField[]) {
+  return values.find(hasCatalogFieldValue);
+}
+
 function normalizeProduct(product: ApiProduct): Product {
+  const category = firstCatalogField(product.category, product.category_name);
+  const subcategory = firstCatalogField(
+    product.subcategory,
+    product.sub_category,
+    product.subcategoria,
+    product.subCategory,
+    product.subcategory_name,
+    product.sub_category_name
+  );
+
   return {
     ...product,
+    category: category ?? product.category,
+    subcategory: subcategory ?? product.subcategory,
     price: toNumber(product.price),
     modifier_groups: (product.modifier_groups ?? []).map((group) => ({
       ...group,

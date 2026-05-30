@@ -1,45 +1,60 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { menuApi } from '@/shared/api/services';
 import { formatCLP } from '@/shared/utils/format';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui';
-import type { Product } from '@/types';
+import type { Product, ProductCatalogField } from '@/types';
 
 type ImageStatus = 'all' | 'with-image' | 'without-image' | 'image-error';
 
-type CatalogField = string | { name?: string; title?: string; label?: string } | null | undefined;
-
-type CatalogReviewProduct = Product & {
-  product_name?: string;
-  category?: CatalogField;
-  subcategory?: CatalogField;
-};
+type CatalogReviewProduct = Product;
 
 const ALL_CATEGORIES = 'all';
-const NO_CATEGORY = 'Sin categoria';
-const NO_SUBCATEGORY = 'Sin subcategoria';
+const NO_CATEGORY = 'Sin categoría';
+const NO_SUBCATEGORY = 'Sin subcategoría';
 
-function fieldLabel(value: CatalogField, fallback: string) {
+function fieldLabel(value: ProductCatalogField, fallback: string) {
   if (typeof value === 'string' && value.trim()) return value.trim();
 
   if (value && typeof value === 'object') {
-    return value.name ?? value.title ?? value.label ?? fallback;
+    return value.name ?? value.title ?? value.label ?? value.value ?? fallback;
   }
 
   return fallback;
+}
+
+function hasCatalogFieldValue(value: ProductCatalogField) {
+  return fieldLabel(value, '').trim().length > 0;
+}
+
+function firstCatalogField(...values: ProductCatalogField[]) {
+  return values.find(hasCatalogFieldValue);
 }
 
 function productName(product: CatalogReviewProduct) {
   return product.product_name?.trim() || product.name;
 }
 
-function productCategory(product: CatalogReviewProduct) {
-  return fieldLabel(product.category, product.category_id ? `Categoria ${product.category_id}` : NO_CATEGORY);
+function getProductCategory(product: CatalogReviewProduct) {
+  return fieldLabel(
+    firstCatalogField(product.category, product.category_name),
+    product.category_id ? `Categoría ${product.category_id}` : NO_CATEGORY
+  );
 }
 
-function productSubcategory(product: CatalogReviewProduct) {
-  return fieldLabel(product.subcategory, NO_SUBCATEGORY);
+function getProductSubcategory(product: CatalogReviewProduct) {
+  return fieldLabel(
+    firstCatalogField(
+      product.subcategory,
+      product.sub_category,
+      product.subcategoria,
+      product.subCategory,
+      product.subcategory_name,
+      product.sub_category_name
+    ),
+    NO_SUBCATEGORY
+  );
 }
 
 function statusFor(product: CatalogReviewProduct, imageErrors: Record<number, boolean>): ImageStatus {
@@ -86,8 +101,14 @@ export default function CatalogReviewPage() {
     [products]
   );
 
+  useEffect(() => {
+    if (import.meta.env.DEV && catalogProducts[0]) {
+      console.log('[catalog-review] first product received', catalogProducts[0]);
+    }
+  }, [catalogProducts]);
+
   const categoryOptions = useMemo(
-    () => Array.from(new Set(catalogProducts.map(productCategory))).sort(),
+    () => Array.from(new Set(catalogProducts.map(getProductCategory))).sort(),
     [catalogProducts]
   );
 
@@ -95,17 +116,17 @@ export default function CatalogReviewPage() {
     const scopedProducts =
       categoryFilter === ALL_CATEGORIES
         ? catalogProducts
-        : catalogProducts.filter((product) => productCategory(product) === categoryFilter);
+        : catalogProducts.filter((product) => getProductCategory(product) === categoryFilter);
 
-    return Array.from(new Set(scopedProducts.map(productSubcategory))).sort();
+    return Array.from(new Set(scopedProducts.map(getProductSubcategory))).sort();
   }, [catalogProducts, categoryFilter]);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
     return catalogProducts.filter((product) => {
-      const category = productCategory(product);
-      const subcategory = productSubcategory(product);
+      const category = getProductCategory(product);
+      const subcategory = getProductSubcategory(product);
       const imageStatus = statusFor(product, imageErrors);
       const name = productName(product).toLowerCase();
       const sku = product.sku?.toLowerCase() ?? '';
@@ -138,8 +159,8 @@ export default function CatalogReviewPage() {
   const groupedProducts = useMemo(() => {
     return filteredProducts.reduce<Record<string, Record<string, CatalogReviewProduct[]>>>(
       (groups, product) => {
-        const category = productCategory(product);
-        const subcategory = productSubcategory(product);
+        const category = getProductCategory(product);
+        const subcategory = getProductSubcategory(product);
 
         groups[category] ??= {};
         groups[category][subcategory] ??= [];
@@ -373,8 +394,8 @@ function CatalogReviewCard({ imageStatus, onImageError, product }: CatalogReview
 
         <dl className="grid gap-2 text-xs text-gray-600">
           <ProductMeta label="SKU" value={product.sku || 'Sin SKU'} />
-          <ProductMeta label="Categoria" value={productCategory(product)} />
-          <ProductMeta label="Subcategoria" value={productSubcategory(product)} />
+          <ProductMeta label="Categoria" value={getProductCategory(product)} />
+          <ProductMeta label="Subcategoria" value={getProductSubcategory(product)} />
           <ProductMeta label="Precio" value={formatCLP(product.price)} strong />
         </dl>
       </div>
