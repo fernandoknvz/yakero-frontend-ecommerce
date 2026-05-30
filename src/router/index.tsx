@@ -12,6 +12,7 @@ import { ProtectedRoute, PublicOnlyRoute } from './guards';
 import AppLayout from './AppLayout';
 
 const HomePage = lazy(() => import('../features/menu/pages/HomePage'));
+const CatalogReviewPage = lazy(() => import('../features/menu/pages/CatalogReviewPage'));
 const ProductDetailPage = lazy(() => import('../features/menu/pages/ProductDetailPage'));
 const CheckoutPage = lazy(() => import('../features/checkout/pages/CheckoutPage'));
 const PaymentStatusPage = lazy(() => import('../features/checkout/pages/PaymentStatusPage'));
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: wrap(HomePage) },
+      { path: 'admin/catalog-review', element: wrap(CatalogReviewPage) },
       { path: 'productos/:productId', element: wrap(ProductDetailPage) },
       { path: 'checkout', element: wrap(CheckoutPage) },
       { path: 'orders/:id', element: wrap(OrderTrackingPage) },
